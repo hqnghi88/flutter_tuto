@@ -1,0 +1,783 @@
+--- PAGE 315 ---
+8
+Chapter 8: Deep Links & 
+Web URLs
+By Vincent Ngo
+Sometimes, opening your app and working through the navigation to get to a screen 
+is just too much trouble for the user. Redirecting to a speciﬁc part of your app is a 
+powerful marketing tool for user engagement. For example, generating a special QR 
+code for a promotion, then letting the user scan the QR code to visit that speciﬁc 
+product in your app, is a cool and effective way to build interest in the product.
+In the last chapter, you learned how to use Navigator 2.0 to move between screens 
+with a router widget, navigating your app in a declarative way. Now, you’ll learn to 
+use more features of Navigator 2.0. Speciﬁcally, you’ll learn how to deep link to 
+screens in your app and handle web URLs on the web.
+raywenderlich.com 315
+
+--- PAGE 316 ---
+For example, here’s how Fooderlich will look in the Chrome web browser:
+By the end of this chapter, you’ll know how to:
+• Parse URL strings and query parameters.
+• Convert a URL to and from your app state.
+• Support deep linking on iOS and Android.
+• Support URL-driven navigation in the browser for Flutter web apps.
+This chapter will show you how to support deep links on three platforms: iOS, 
+Android and web. You’ll be able to direct users to any screen of your choice.
+Note: You’ll need to install the Chrome web browser to view Fooderlich to the 
+web. If you don’t have Chrome already, you can get it from https://
+www.google.com/chrome/. The Flutter web project can run on other browsers, 
+but this chapter only covers testing and development on Chrome.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 316
+
+--- PAGE 317 ---
+Understanding deep links
+A deep link is a URL that navigates to a speciﬁc destination in your mobile app. You 
+can think of deep links like a URL address you enter into a web browser to go to a 
+speciﬁc page of a website rather than the home page.
+Deep links help with user engagement and business marketing. For example, if you 
+are running a sale, you can direct the user to a speciﬁc product page in your app 
+instead of making them search around for it.
+Imagine that Fooderlich has its own website. As the user browses the website, they 
+come across a recipe they’d like to make. By using deep linking, you could let users 
+click on the recipe to open the app directly on the Grocery Item screen and 
+immediately start adding ingredients to their shopping list. This saves them time 
+and makes the app more enjoyable.
+• With deep linking, Fooderlich is more automated. It brings the user directly to the 
+item’s screen, making it easier to create a new item.
+• Without deep linking, it’s more manual. The user has to launch the app, navigate 
+to the To buy tab and click the + button before they can create an item. That takes 
+three steps instead of one, and likely some head-scratching too!
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 317
+
+--- PAGE 318 ---
+Types of deep links
+There are three types of deep links:
+• URI schemes: An app’s own URI scheme. fooderlich://raywenderlich.com/home 
+is an example of Fooderlich’s URI scheme. This form of deep link only works if the 
+user has installed your app.
+• iOS Universal Links: In the root of your web domain, you place a ﬁle that points 
+to a speciﬁc app ID to know whether to open your app or to direct the user to the 
+App Store. You must register that speciﬁc app ID with Apple to handle links from 
+that domain.
+• Android App Links: These are like iOS Universal Links, but for the Android 
+platform. Android App Links take users to a link’s speciﬁc content directly in your 
+app. They leverage HTTP URLs and are associated with a website. For users that 
+don’t have your app installed, these links will go directly to the content of your 
+website.
+In this chapter, you’ll only look at URI Schemes. For more information on how to set 
+up iOS Universal Links and Android App Links, check out the following:
+• iOS Universal Links: https://www.raywenderlich.com/6080-universal-links-
+make-the-connection.
+• Android App Links: https://www.raywenderlich.com/18330247-deep-links-in-
+android-getting-started.
+Getting started
+Note: We recommend that you use the starter project for this chapter rather 
+than continuing with the project from the last chapter.
+Open the starter project in Android Studio and run flutter pub get. Then, run the 
+app on iOS or Android.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 318
+
+--- PAGE 319 ---
+You’ll see that the Fooderlich app shows the Login screen.
+Soon, you’ll be able to redirect the user to different parts of the app. But ﬁrst, take a 
+moment to review what’s changed in the starter project since the last chapter.
+Project ﬁles
+Before you dive into parsing URLs, check out the new ﬁles in this starter project.
+Screens folder
+There’s one change in lib/screens/:
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 319
+
+--- PAGE 320 ---
+Models folder
+There’s two new additions in lib/models/:
+• app_cache.dart: Helps to cache user info, such as the user login and onboarding 
+statuses. It checks the cache to see if the user needs to log in or complete the 
+onboarding process.
+• app_state_manager.dart: Depends on AppCache to check the user login and 
+onboarding status. When the app calls initializeApp(), it checks the app cache 
+to update the appropriate state.
+New packages
+There are two new packages in pubspec.yaml:
+url_launcher: ^6.0.4 
+shared_preferences: ^2.0.5
+Here’s what each of them does:
+• url_launcher: A cross-platform library to help launch a URL.
+• shared_preferences: Wraps platform-speciﬁc persistent storage for simple data. 
+AppCache uses this package to store the user login and onboarding state.
+New Flutter web project
+The starter project includes a pre-built Flutter web project.
+Note: To speed things up, the web project is pre-built in your starter project. 
+To learn how to create a Flutter web app, check out: https://ﬂutter.dev/docs/
+get-started/web#add-web-support-to-an-existing-app.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 320
+
+--- PAGE 321 ---
+Setting up deep links
+To enable deep linking on iOS and Android, you have to add some metadata tags in 
+the respective platforms.
+Setting up deep links on iOS
+Open ios/Runner/Info.plist. You’ll see some new key-value pairs, which enable deep 
+linking for iOS:
+<key>FlutterDeepLinkingEnabled</key> 
+<true/> 
+<key>CFBundleURLTypes</key> 
+<array> 
+  <dict> 
+  <key>CFBundleTypeRole</key> 
+  <string>Editor</string> 
+  <key>CFBundleURLName</key> 
+  <string>raywenderlich.com</string> 
+  <key>CFBundleURLSchemes</key> 
+  <array> 
+  <string>fooderlich</string> 
+  </array> 
+  </dict> 
+</array>
+CFBundleURLName is a unique URL that distinguishes your app from others that use 
+the same scheme. fooderlich is the name of the URL scheme you’ll use later.
+Setting up deep links on Android
+Open android/app/src/main/AndroidManifest.xml. Here you’ll also ﬁnd two new 
+deﬁnitions in the <data> tag:
+<!-- Deep linking --> 
+<meta-data android:name="flutter_deeplinking_enabled" 
+android:value="true" /> 
+<intent-filter> 
+<action android:name="android.intent.action.VIEW" /> 
+<category android:name="android.intent.category.DEFAULT" /> 
+<category android:name="android.intent.category.BROWSABLE" /> 
+<data 
+  android:scheme="fooderlich" 
+  android:host="raywenderlich.com" /> 
+</intent-filter>
+Like iOS, you set the same values for scheme and host.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 321
+
+--- PAGE 322 ---
+When you create a deep link for Fooderlich, the custom URL scheme looks like this:
+fooderlich://raywenderlich.com/<path>
+Now, for a quick overview of the URL paths you’ll create.
+Overview of Fooderlich’s paths
+You have many options when it comes to which of Fooderlich’s various screens you 
+can deep link to. Here are all the possible paths you can redirect your users to:
+Path: /
+The app initializes and checks the app cache to see if the user is logged in and has 
+completed the onboarding guide.
+• /login: Redirect to the Login screen if the user isn’t logged in yet.
+• /onboarding: Redirects to the Onboarding screen if the user hasn’t completed the 
+onboarding.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 322
+
+--- PAGE 323 ---
+Path: /home?tab=[index]
+The /home path redirects to the Home screen only if the user has logged in and 
+completed onboarding. It contains one query parameter, tab, which directs to a tab 
+index. As shown in the screenshots below, the tab index is 0, 1 or 2 respectively.
+Path: /proﬁle
+If the user has logged in and completed onboarding, /profile will redirect to the 
+Proﬁle screen.
+Path: /item?id=[uuid]
+/item redirects to the Grocery Item screen. It contains one query parameter, id. 
+There are two scenarios:
+1. If query parameter id has a value, it will redirect to a speciﬁc item in the list.
+2. If there is no query parameter, it shows an empty item screen for the user to 
+create a new item.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 323
+
+--- PAGE 324 ---
+You can see the result in the middle screenshot below.
+Note: Keep in mind that these URL paths will work the same for both mobile 
+and web apps.
+When you deep link on mobile, you’ll use the following URI scheme:
+fooderlich://raywenderlich.com/<path>
+On the web, the URI scheme is like any web browser URL:
+http://localhost:60738/#/<path>
+Before you start implementing deep links, take a moment for a quick Navigator 2.0 
+recap.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 324
+
+--- PAGE 325 ---
+Recapping Navigator 2.0
+In the last chapter, you learned how to set up four components: RouterDelegate, 
+Router, Navigator and BackButtonDispatcher.
+• Router is a widget that extends RouterDelegate. The router ensures that the 
+messages are passed to RouterDelegate.
+• Navigator deﬁnes a stack of MaterialPages in a declarative way. It also handles 
+any onPopPage events.
+• BackButtonDispatcher handles platform-speciﬁc system back button presses. It 
+listens to requests by the OS and notiﬁes the router delegate to pop a route.
+The next two components you’ll look at are RouteInformationProvider and 
+RouteInformationParser.
+• RouteInformationProvider: Provides the route information to the router. It 
+informs the router about the initial route and notiﬁes the router of new intents. 
+You don’t have to create this class, the default implementation is usually all you 
+need.
+• RouteInformationParser: Gets the route string from 
+RouteInformationProvider, then parses the URL string to a generic user-deﬁned 
+data type. This data type is a navigation conﬁguration.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 325
+
+--- PAGE 326 ---
+Deep links under the hood
+For deep links to work, you need to do two key things: convert a URL to an app state 
+and convert an app state to a URL. Next, you’ll see both in detail.
+Converting a URL to an app state
+The ﬁrst part of supporting deep links is to ﬁgure out which state of the app 
+corresponds to a speciﬁc URL. Here’s how the conversion happens:
+1. The user enters a new URL triggered by a deep link or by changing the URL in the 
+web browser’s address bar.
+2. Within RouteInformationParser, parseRouteInformation() converts the URL 
+string into a user-deﬁned data type. This is called the navigation state. This 
+data type includes the path and the query parameters. You’ll build this soon.
+3. The router then calls setNewRoutePath(), which converts your navigation state 
+into an app state. It will then use the current app state to conﬁgure the navigator 
+stack.
+Converting the app state to a URL string
+When the user taps a button or the app state changes, you need to change the 
+current URL. Here’s what happens when you set up your app to handle URLs:
+1. The router calls routerDelegate’s notifyListeners() to let Flutter know that 
+it needs to update the current URL.
+2. It uses currentConfiguration() to convert your app state back to a navigation 
+state.
+3. restoreRouteInformation() then converts your navigation state into a URL 
+string. On a Flutter web app, this updates the URL bar’s address.
+Note: As you recall, navigation state is just a user-deﬁned data type. It 
+converts a URL string into a proper data type. This object holds information 
+about your navigation, including:
+The URL path or location.
+The query parameters.
+In the next section, AppLink is the data type that encapsulates the URL string.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 326
+
+--- PAGE 327 ---
+Enough theory, it’s time to get started!
+Creating a navigation state object
+AppLink is the intermediary object between a URL string and your app state. The 
+objective of this class is to parse the navigation conﬁguration to and from a URL 
+string.
+In lib/navigation, create a new ﬁle called app_link.dart and add the following:
+class AppLink { 
+  // 1 
+  static const String kHomePath = '/home'; 
+  static const String kOnboardingPath = '/onboarding'; 
+  static const String kLoginPath = '/login'; 
+  static const String kProfilePath = '/profile'; 
+  static const String kItemPath = '/item'; 
+    // 2 
+  static const String kTabParam = 'tab'; 
+  static const String kIdParam = 'id'; 
+    // 3 
+  String location; 
+  // 4 
+  int currentTab; 
+  // 5 
+  String itemId; 
+  // 6 
+  AppLink({this.location, this.currentTab, this.itemId}); 
+ 
+  // TODO: Add fromLocation 
+ 
+  // TODO: Add toLocation 
+}
+AppLink is your navigation state object. Take a moment to understand the properties 
+you added. In the code above, you:
+1. Create constants for each URL path.
+2. Create constants for each of the query parameters you’ll support.
+3. Store the path of the URL using location.
+4. Use currentTab to store the tab you want to redirect the user to.
+5. Store the ID of the item you want to view in itemId.
+6. Initialize the app link with the location and the two query parameters.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 327
+
+--- PAGE 328 ---
+Converting a URL string to an AppLink
+AppLink is an object that helps store the route information. It helps to parse the URL 
+string to a route and vice versa, converting the route information back to a URL 
+string. It essentially encapsulates all the logic that transforms a simple string into a 
+state and back.
+Next locate // TODO: Add fromLocation and add the following:
+static AppLink fromLocation(String location) { 
+  // 1 
+  location = Uri.decodeFull(location); 
+  // 2 
+  final uri = Uri.parse(location); 
+  final params = uri.queryParameters; 
+  // 3 
+  void trySet(String key, void Function(String) setter) { 
+    if (params.containsKey(key)) setter?.call(params[key]); 
+  } 
+  // 4 
+  final link = AppLink()..location = uri.path; 
+  // 5 
+  trySet(AppLink.kTabParam, (s) => link.currentTab = 
+int.tryParse(s)); 
+  trySet(AppLink.kIdParam, (s) => link.itemId = s); 
+  // 6 
+  return link; 
+}
+fromLocation() converts a URL string to an AppLink:
+1. First, you need to decode the URL. URLs often include special characters in their 
+paths, so you need to percent-encode the URL path. For example, you’d encode 
+hello!world to hello%21world.
+2. Parse the URI for query parameter keys and key-value pairs.
+3. trySet() is an internal function that injects keys if the value isn’t null.
+4. Create AppLink with the current path.
+5. Inject the query parameters you found in the URL.
+6. Return the instance of AppLink.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 328
+
+--- PAGE 329 ---
+Converting an AppLink to a URL string
+The app will also need the converse transformation, from AppLink to simple string.
+Locate // TODO: Add toLocation and add the following:
+String toLocation() { 
+  // 1 
+  String addKeyValPair({String key, String value}) => 
+      value == null ? '' : '${key}=$value&'; 
+    // 2 
+  switch (location) { 
+    // 3 
+    case kLoginPath: 
+     return kLoginPath; 
+    // 4 
+    case kOnboardingPath: 
+      return kOnboardingPath; 
+    // 5 
+    case kProfilePath: 
+      return kProfilePath; 
+    // 6 
+    case kItemPath: 
+      var loc = '$kItemPath?'; 
+      loc += addKeyValPair(key: kIdParam, value: itemId); 
+      return Uri.encodeFull(loc); 
+    // 7 
+    default: 
+      var loc = '$kHomePath?'; 
+      loc += addKeyValPair(key: kTabParam, value: 
+currentTab.toString()); 
+      return Uri.encodeFull(loc); 
+  } 
+}
+This converts AppLink back to a URI string. Here’s how it works. You:
+1. Create an internal function that formats the query parameter key-value pair into 
+a string format.
+2. Go through each deﬁned path.
+3. If the path is kLoginPath, return the right string path: /login.
+4. If the path is kOnboardingPath, return the right string path: /onboarding.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 329
+
+--- PAGE 330 ---
+5. If the path is kProfilePath, return the right string path: /profile.
+6. If the path is kItemPath, return the right string path: /item, and if there are any 
+parameters, append ?id=${id}.
+7. If the path is invalid, default to the path /home. If the user selected a tab, 
+append ?tab=${tabIndex}.
+Next, you’ll use RouteInformationParser to parse route information into AppLink.
+Creating a route information parser
+In the navigation directory, create a new ﬁle called app_route_parser.dart and add 
+the following:
+import 'package:flutter/material.dart'; 
+import 'app_link.dart'; 
+ 
+// 1 
+class AppRouteParser extends RouteInformationParser<AppLink> { 
+  // 2 
+  @override 
+  Future<AppLink> parseRouteInformation( 
+      RouteInformation routeInformation) async { 
+    // 3 
+    final link = 
+AppLink.fromLocation(routeInformation.location); 
+    return link; 
+  } 
+ 
+  // 4 
+  @override 
+  RouteInformation restoreRouteInformation(AppLink appLink) { 
+    // 5 
+    final location = appLink.toLocation(); 
+    // 6 
+    return RouteInformation(location: location); 
+  } 
+}
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 330
+
+--- PAGE 331 ---
+Here’s how the code works:
+1. AppRouteParser extends RouteInformationParser. Notice it takes a generic 
+type. In this case, your type is AppLink, which holds all the route and navigation 
+information.
+2. The ﬁrst method you need to override is parseRouteInformation(). The route 
+information contains the URL string.
+3. Take the route information and build an instance of AppLink from it.
+4. The second method you need to override is restoreRouteInformation().
+5. This function passes in an AppLink object. You ask AppLink to give you back the 
+URL string.
+6. You wrap it in RouteInformation to pass it along.
+Connecting the parser to the app router
+Now that you’ve set up your RouteInformationParser, it’s time to connect it to 
+your router delegate.
+Open lib/main.dart, locate // TODO: Initialize RouteInformationParser and 
+replace it with the following:
+final routeParser = AppRouteParser();
+Here, you initialize your app route parser. If it didn’t auto-import, be sure to add the 
+following to the top:
+import 'navigation/app_route_parser.dart';
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 331
+
+--- PAGE 332 ---
+Next, locate // TODO: Replace with Material.router and replace the return 
+statement below it with the following:
+return MaterialApp.router( 
+  theme: theme, 
+  title: 'Fooderlich', 
+  backButtonDispatcher: RootBackButtonDispatcher(), 
+  // 1 
+  routeInformationParser: routeParser, 
+  // 2 
+  routerDelegate: _appRouter, 
+);
+You’ve created a MaterialApp that initializes an internal router. Here’s what it does:
+1. Set routeParser. Remember that the route information parser’s job is to convert 
+the app state to and from a URL string.
+2. routerDelegate helps construct the stack of pages that represents your app 
+state.
+At this point, you might see some errors in the simulator. You’ll ﬁx them soon.
+Converting a URL to an app state
+When the user enters a new URL on the web or triggers a deep link on mobile, 
+RouteInformationProvider notiﬁes RouteInformationParser that there’s a new 
+route, as shown below:
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 332
+
+--- PAGE 333 ---
+Here is the process that goes from a URL to an app state:
+1. The user enters a new URL in the web browser’s address bar.
+2. RouteInformationParser parses the new route into your navigation state, an 
+instance of AppLink.
+3. Based on the navigation state, RouterDelegate updates the app state to reﬂect 
+the new changes.
+Conﬁguring navigation
+Quick theory test: Where’s the logic that maps a speciﬁc URL path to a speciﬁc 
+screen? It’s in setNewRoutePath()!
+Open lib/navigation/app_router.dart, locate // TODO: Add <AppLink> and 
+replace it and the space just before it with the following:
+<AppLink>
+Remember that AppLink encapsulates all the route information. The code above sets 
+the RouterDelegate’s user-deﬁned data type to AppLink.
+If the imports aren’t already added at the top, add the following:
+import 'app_link.dart';
+Next, locate // TODO: Replace setNewRoutePath and replace the comment and 
+the code below with the following:
+// 1 
+@override 
+Future<void> setNewRoutePath(AppLink newLink) async { 
+  // 2 
+  switch (newLink.location) { 
+    // 3 
+    case AppLink.kProfilePath: 
+      profileManager.tapOnProfile(true); 
+      break; 
+    // 4 
+    case AppLink.kItemPath: 
+      // 5 
+      if (newLink.itemId != null) { 
+        groceryManager.setSelectedGroceryItem(newLink.itemId); 
+      } else { 
+        // 6 
+        groceryManager.createNewItem();
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 333
+
+--- PAGE 334 ---
+      } 
+      // 7 
+      profileManager.tapOnProfile(false); 
+      break; 
+    // 8 
+    case AppLink.kHomePath: 
+      // 9 
+      appStateManager.goToTab(newLink.currentTab ?? 0); 
+      // 10 
+      profileManager.tapOnProfile(false); 
+      groceryManager.groceryItemTapped(null); 
+      break; 
+    // 11 
+    default: 
+      break; 
+  } 
+}
+Here’s how you convert your app link to an app state:
+1. You call setNewRoutePath() when a new route is pushed. It passes along an 
+AppLink. This is your navigation conﬁguration.
+2. Use a switch to check every location.
+3. If the new location is /profile, show the Proﬁle screen.
+4. Check if the new location starts with /item.
+5. If itemId is not null, set the selected grocery item and show the Grocery Item 
+screen.
+6. If itemId is null, show an empty Grocery Item screen.
+7. Hide the Proﬁle screen.
+8. If the new location is /home.
+9. Set the currently selected tab.
+10. Make sure the Proﬁle screen and Grocery Item screen are hidden.
+11. If the location does not exist, do nothing.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 334
+
+--- PAGE 335 ---
+Converting the app state to a URL
+At this point, you’ve converted a URL to an app state. Next, you need to do the 
+opposite. When the user taps a button or navigates to another screen, you need to 
+convert the app state back to a URL string. For the web app, this will synchronize the 
+browser’s address bar.
+1. When the user presses a button or modiﬁes a state, notifyListeners() ﬁres.
+2. RouteInformationParser asks for the current navigation conﬁguration, so you 
+must convert your app state to an AppLink.
+3. RouteInformationParser then calls restoreRouteInformation and converts 
+AppLink to a URL string.
+Still in lib/navigation/app_router.dart, locate // TODO: Convert app state to 
+applink and replace it with the following:
+AppLink getCurrentPath() { 
+  // 1 
+  if (!appStateManager.isLoggedIn) { 
+    return AppLink(location: AppLink.kLoginPath); 
+  // 2 
+  } else if (!appStateManager.isOnboardingComplete) { 
+    return AppLink(location: AppLink.kOnboardingPath); 
+  // 3 
+  } else if (profileManager.didSelectUser) { 
+    return AppLink(location: AppLink.kProfilePath); 
+  // 4 
+  } else if (groceryManager.isCreatingNewItem) { 
+    return AppLink(location: AppLink.kItemPath); 
+  // 5 
+  } else if (groceryManager.selectedGroceryItem != null) { 
+    final id = groceryManager.selectedGroceryItem.id; 
+    return AppLink(location: AppLink.kItemPath, itemId: id);
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 335
+
+--- PAGE 336 ---
+  // 6 
+  } else { 
+    return AppLink( 
+        location: AppLink.kHomePath, 
+        currentTab: appStateManager.getSelectedTab); 
+  } 
+}
+This is a helper function that converts the app state to an AppLink object. Here’s how 
+it works:
+1. If the user hasn’t logged in, return the app link with the login path.
+2. If the user hasn’t completed onboarding, return the app link with the onboarding 
+path.
+3. If the user taps the proﬁle, return the app link with the proﬁle path.
+4. If the user taps the + button to create a new grocery item, return the app link 
+with the item path.
+5. If the user selected an existing item, return an app link with the item path and 
+the item’s id.
+6. If none of the conditions are met, default by returning to the home path with the 
+selected tab.
+Next, locate // TODO: Apply configuration helper and replace it with the 
+following:
+@override 
+AppLink get currentConfiguration => getCurrentPath();
+Accessing currentConfiguration calls the helper, getCurrentPath(), which 
+checks the app state and returns the right app link conﬁguration.
+Congratulations, you’ve now set everything up! Now, you get to see your work in 
+action.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 336
+
+--- PAGE 337 ---
+T esting deep links
+For your next step, you’ll test how deep linking works on iOS, Android and the web.
+T esting deep links on iOS
+In Android Studio, select an iOS device and press the Play button:
+Once the simulator is running, log in and complete the onboarding, as shown below:
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 337
+
+--- PAGE 338 ---
+Deep linking to the Home screen
+Enter the following in your terminal:
+xcrun simctl openurl booted 'fooderlich://raywenderlich.com/
+home?tab=1'
+In the simulator, this automatically switches to Fooderlich’s second tab, as shown 
+below:
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 338
+
+--- PAGE 339 ---
+Deep linking to the Proﬁle screen
+Next, run the following command:
+xcrun simctl openurl booted 'fooderlich://raywenderlich.com/
+profile'
+This opens the Proﬁle screen, as shown below:
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 339
+
+--- PAGE 340 ---
+Deep linking to create a new item
+Next, run the following command:
+xcrun simctl openurl booted 'fooderlich://raywenderlich.com/
+item'
+The Grocery Item screen will now show:
+Following this pattern, you can build paths to any location in your app!
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 340
+
+--- PAGE 341 ---
+Resetting the cache in the iOS simulator
+Recall that AppStateManager checks with AppCache to see whether the user is 
+logged in or has onboarded. If you want to reset the cache to see the Login screen 
+again, you have two options:
+1. Go to the Proﬁle view and tap Log out. This invalidates the app cache.
+2. If you are running on an iOS simulator, you can select Erase All Content and 
+Settings… to clear the cache.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 341
+
+--- PAGE 342 ---
+Note: Any other apps you have on the simulator will be deleted as well.
+T esting deep links on Android
+Stop running on iOS. Open Android Studio, select an Android device and click the 
+Play button:
+Once the simulator or device is running, log in and complete the onboarding process, 
+as shown below:
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 342
+
+--- PAGE 343 ---
+Deep linking to the Home screen
+Enter the following in your terminal:
+~/Library/Android/sdk/platform-tools/adb shell am start -a 
+android.intent.action.VIEW \ 
+    -c android.intent.category.BROWSABLE \ 
+    -d 'fooderlich://raywenderlich.com/home?tab=1'
+Note: If you receive a message in Terminal like: Warning: Activity not 
+started, intent has been delivered to currently running top-most 
+instance, just ignore it. It only means that the app is already running.
+The full path is listed to ensure that if you don’t have adb in your $PATH, you 
+can still execute this command. The \ at the end of each line is to nicely 
+format the script across multiple lines.
+This directs to the second tab of Fooderlich, as shown below:
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 343
+
+--- PAGE 344 ---
+Deep linking to the Proﬁle screen
+Next, run the following command:
+~/Library/Android/sdk/platform-tools/adb shell am start -a 
+android.intent.action.VIEW \ 
+    -c android.intent.category.BROWSABLE \ 
+    -d 'fooderlich://raywenderlich.com/profile'
+This opens the Proﬁle screen, as shown below:
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 344
+
+--- PAGE 345 ---
+Deep linking to Create New Item
+Next, run the following command:
+~/Library/Android/sdk/platform-tools/adb shell am start -a 
+android.intent.action.VIEW \ 
+    -c android.intent.category.BROWSABLE \ 
+    -d 'fooderlich://raywenderlich.com/item'
+The Grocery Item screen will appear, as shown below:
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 345
+
+--- PAGE 346 ---
+Resetting the cache in Android
+If you need to reset your user cache, here’s what you do:
+1. Long-press the Fooderlich app icon, then tap App info.
+2. Next, tap Storage & cache.
+3. Finally, tap Clear cache. This will wipe your cache.
+Now, it’s time to test how Fooderlich handles URLs on the web.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 346
+
+--- PAGE 347 ---
+Running the web app
+Stop running on Android. In Android Studio, select Chrome (web) and click the Play 
+button:
+Note: Your data won’t persist between app launches. That’s because Flutter 
+web runs the equivalent of incognito mode during development.
+If you build and release your Flutter web app, it will work as expected. For 
+more information on how to build for release, check: https://ﬂutter.dev/docs/
+deployment/web#building-the-app-for-release.
+Go through the Fooderlich UI ﬂow and you’ll see that the web browser’s address bar 
+changes:
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 347
+
+--- PAGE 348 ---
+If you change the tab query parameter’s value to 0, 1 or 2, the app will automatically 
+switch to that tab.
+Next, note that tapping the + button opens the grocery item.
+One cool thing to notice is that the app stores the entire browser history.
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 348
+
+--- PAGE 349 ---
+Tap the Back and Forward buttons and the app will restore that state! How cool is 
+that? Another thing you can do is long-press the Back button to jump to a speciﬁc 
+state in the browser history.
+Congratulations on learning how to work with deep links in your Flutter app!
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 349
+
+--- PAGE 350 ---
+Key points
+• The app notiﬁes RouteInformationProvider when there’s a new route.
+• The provider passes the route information to RouteInformationParser to parse 
+the URL string.
+• The parser converts app state to and from a URL string.
+• AppLink models the navigation state. It is a user-deﬁned data type that 
+encapsulates information about a URL string.
+• In development mode, the Flutter web app does not persist data between app 
+launches. The web app generated in release mode will work on the other browsers.
+Where to go from here?
+If you’re curious about how to remove the # symbol from a URL in the web app, check 
+out: https://ﬂutter.dev/docs/development/ui/navigation/url-strategies.
+Look at how gSkinner’s ﬂutter-folio app handles navigation. The idea of an app link 
+came from this sample project. Check out their example here: https://github.com/
+gskinnerTeam/ﬂutter-folio.
+You can see examples of two different types of web renderers here: https://
+ﬂutter.dev/docs/development/tools/web-renderers.
+You learned how to extend Navigator 2.0 to support deep links and to synchronize a 
+web browser’s URL address bar. This helps bring users to speciﬁc destinations within 
+your app, building better user engagement!
+Being able to manage your navigation state for multiple platforms is truly amazing!
+Flutter Apprentice Chapter 8: Deep Links & Web URLs
+raywenderlich.com 350
+
+--- PAGE 351 ---
+Section IV: Networking, 
+Persistence and State
+Most apps interact with the network to retrieve data and then persist that data 
+locally in some form of cache, such as a database. In this section, you’ll build a new 
+app that lets you search the Internet for recipes, bookmark recipes, and save their 
+ingredients into a shopping list.
+You’ll learn about making network requests, parsing the network JSON response, and 
+saving data in a SQLite database. You’ll also get an introduction to using Dart 
+streams.
+Finally, this section will also dive deeper into the important topic of app state, which 
+determines where and how your user interface stores and refreshes data in the user 
+interface as a user interacts with your app.
+raywenderlich.com 351
+

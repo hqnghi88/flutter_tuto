@@ -1,0 +1,443 @@
+--- PAGE 352 ---
+9
+Chapter 9: Shared 
+Preferences
+By Kevin David Moore
+Picture this: You’re browsing recipes and ﬁnd one you like. You’re in a hurry and 
+want to bookmark it to check it later. Can you build a Flutter app that does that? You 
+sure can! Read on to ﬁnd out how.
+In this chapter, your goal is to learn how to use the shared_preferences plugin to 
+save important pieces of information to your device.
+You’ll start with a new project that shows three tabs at the bottom of the screen for 
+three different views: Recipes, Bookmarks and Groceries.
+The ﬁrst screen is where you’ll search for recipes you want to prepare. Once you ﬁnd 
+a recipe you like, just bookmark it and the app will add the recipe to your 
+Bookmarks page and also add all the ingredients you need to your shopping list. 
+You’ll use a web API to search for recipes and store the ones you bookmark in a local 
+database.
+raywenderlich.com 352
+
+--- PAGE 353 ---
+The completed app will look something like:
+This shows the Recipes tab with the results you get when searching for Pasta. It’s as 
+easy as typing in the search text ﬁeld and pressing the Search icon. The app stores 
+your search term history in the combo box to the right of the text ﬁeld.
+When you tap a card, you’ll see something like:
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 353
+
+--- PAGE 354 ---
+To save a recipe, just tap the Bookmark button. When you navigate to the 
+Bookmarks tab, you’ll see that the recipe has been saved:
+If you don’t want the recipe any more, swipe left or right and you’ll see a delete 
+button that allows you to remove it from the list of bookmarked recipes.
+The Groceries tab shows the ingredients you need to make the recipes you’ve 
+bookmarked.
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 354
+
+--- PAGE 355 ---
+You’ll build this app over the next few chapters. In this chapter, you’ll use shared 
+preferences to save simple data like the selected tab and also to cache the searched 
+items in the Recipes tab.
+By the end of the chapter, you’ll know:
+• What shared preferences are.
+• How to use the shared_preferences plugin to save and retrieve objects.
+Now that you know what your goal is, it’s time to jump in!
+Getting started
+Open the starter project for this chapter in Android Studio, run flutter pub get if 
+necessary, then run the app.
+Notice the three tabs at the bottom — each will show a different screen when you tap 
+it. Only the Recipes screen currently has any UI showing. It looks like this:
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 355
+
+--- PAGE 356 ---
+App libraries
+The starter project includes the following libraries in pubspec.yaml:
+dependencies: 
+  ... 
+  cached_network_image: ^2.5.0 
+  flutter_slidable: ^0.5.7 
+  flutter_svg: ^0.19.3
+Here’s what they help you do:
+• cached_network_image: Download and cache the images you’ll use in the app.
+• ﬂutter_slidable: Build a widget that lets the user slide a card left and right to 
+perform different actions, like deleting a saved recipe.
+• ﬂutter_svg: Load SVG images without the need to use a program to convert them 
+to vector ﬁles.
+Now that you’ve had a look at the libraries, take a moment to think about how you 
+save data before you begin coding your app.
+Saving data
+There are three primary ways to save data to your device:
+1. Write formatted data, like JSON, to a ﬁle.
+2. Use a library or plugin to write simple data to a shared location.
+3. Use a SQLite database.
+Writing data to a ﬁle is simple, but it requires you to handle reading and writing data 
+in the correct format and order.
+You can also use a library or plugin to write simple data to a shared location 
+managed by the platform, like iOS and Android. This is what you’ll do in this chapter.
+For more complex data, you can save the information to a local database. You’ll learn 
+more about that in future chapters.
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 356
+
+--- PAGE 357 ---
+Why save small bits of data?
+There are many reasons to save small bits of data. For example, you could save the 
+user ID when the user has logged in — or if the user has logged in at all. You could 
+also save the onboarding state or data that the user has bookmarked to consult later.
+Note that this simple data saved to a shared location is lost when the user uninstalls 
+the app.
+The shared_preferences plugin
+shared_preferences is a Flutter plugin that allows you to save data in a key-value 
+format so you can easily retrieve it later. Behind the scenes, it uses the aptly named 
+SharedPreferences on Android and the similar UserDefaults on iOS.
+For this app, you’ll learn to use the plugin by saving the search terms the user 
+entered as well as the tab that’s currently selected.
+One of the great things about this plugin is that it doesn’t require any setup or 
+conﬁguration. Just create an instance of the plugin and you’re ready to fetch and save 
+data.
+Note: The shared_preferences plugin gives you a quick way to persist and 
+retrieve data, but it only supports saving simple properties like strings, 
+numbers, and boolean values.
+In later chapters, you’ll learn about alternatives that you can use when you 
+want to save complex data.
+Be aware that shared_preferences is not a good ﬁt to store sensitive data. To 
+store passwords or access tokens, check out the Android Keystore for Android 
+and Keychain Services for iOS, or consider using the ﬂutter_secure_storage 
+plugin.
+To use shared_preferences, you need to ﬁrst add it as a dependency. Open 
+pubspec.yaml and, underneath the flutter_svg library, add:
+  shared_preferences: ^2.0.5
+Make sure you indent it the same as the other libraries.
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 357
+
+--- PAGE 358 ---
+Now, click the Pub Get button to get the shared_preferences library.
+You can also run pub get from the command line:
+flutter pub get
+You’re now ready to store data. You’ll start by saving the searches the user makes so 
+they can easily select them again in the future.
+Saving UI states
+You’ll use shared_preferences to save a list of saved searches in this section. Later, 
+you’ll also save the tab that the user has selected so the app always opens to that tab.
+You’ll start by preparing your search to store that information.
+Adding an entry to the search list
+First, you’ll change the UI so that when the user presses the search icon, the app will 
+add the search entry to the search list.
+Open ui/recipes/recipe_list.dart and after:
+import 'package:flutter/material.dart';
+add:
+import 'package:shared_preferences/shared_preferences.dart'; 
+import '../widgets/custom_dropdown.dart'; 
+import '../colors.dart';
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 358
+
+--- PAGE 359 ---
+That imports the shared_preferences plugin, a custom widget to display a dropdown 
+menu and a helper class to set colors.
+Next, you’ll give each search term a unique key. After:
+class _RecipeListState extends State<RecipeList> {
+add:
+static const String prefSearchKey = 'previousSearches';
+All preferences need to use a unique key or they’ll be overwritten. Here, you’re 
+simply deﬁning a constant for the preference key.
+Next, after this variable:
+bool inErrorState = false;
+add:
+List<String> previousSearches = <String>[];
+This clears the way for you to save the user’s previous searches and keep track of the 
+current search.
+Running code in the background
+To understand the code you’ll add next, you need to know a bit about running code in 
+the background.
+Most modern UIs have a main thread that runs the UI code. Any code that takes a 
+long time needs to run on a different thread or process so it doesn’t block the UI. 
+Dart uses a technique similar to JavaScript to achieve this. The language includes 
+these two keywords:
+• async
+• await
+async marks a method or code section as asynchronous. You then use the await 
+keyword inside that method to wait until an asynchronous process ﬁnishes in the 
+background.
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 359
+
+--- PAGE 360 ---
+Dart also has a class named Future, which indicates that the method promises a 
+future result. SharedPreferences.getInstance() returns 
+Future<SharedPreferences>, which you use to retrieve an instance of the 
+SharedPreferences class. You’ll see that in action next.
+Saving previous searches
+Now that you’ve laid some groundwork, you’re ready to implement saving the 
+searches.
+Still in recipe_list.dart, after dispose(), add the following method:
+void savePreviousSearches() async { 
+  // 1 
+  final prefs = await SharedPreferences.getInstance(); 
+  // 2 
+  prefs.setStringList(prefSearchKey, previousSearches); 
+}
+Here, you use the async keyword to indicate that this method will run 
+asynchronously. It also:
+1. Uses the await keyword to wait for an instance of SharedPreferences.
+2. Saves the list of previous searches using the prefSearchKey key.
+Next, add the following method:
+void getPreviousSearches() async { 
+  // 1 
+  final prefs = await SharedPreferences.getInstance(); 
+  // 2 
+  if (prefs.containsKey(prefSearchKey)) { 
+    // 3 
+    previousSearches = prefs.getStringList(prefSearchKey); 
+    // 4 
+    if (previousSearches == null) { 
+      previousSearches = <String>[]; 
+    } 
+  } 
+}
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 360
+
+--- PAGE 361 ---
+This method is also asynchronous. Here, you:
+1. Use the await keyword to wait for an instance of SharedPreferences.
+2. Check if a preference for your saved list already exists.
+3. Get the list of previous searches.
+4. If the list is null, initialize an empty one.
+Finally, right after super.initState() in initState() add:
+getPreviousSearches();
+This loads any previous searches when the user restarts the app.
+Adding the search functionality
+To perform a search, you need to clear any of your variables and save the new search 
+value. This method will not do an actual search just yet. Do this by adding the 
+startSearch() method after the _buildSearchCard() method:
+void startSearch(String value) { 
+  // 1 
+  setState(() { 
+    // 2 
+    currentSearchList.clear(); 
+    currentCount = 0; 
+    currentEndPosition = pageCount; 
+    currentStartPosition = 0; 
+    hasMore = true; 
+    // 3 
+    if (!previousSearches.contains(value)) { 
+      // 4 
+      previousSearches.add(value); 
+      // 5 
+      savePreviousSearches(); 
+    } 
+  }); 
+}
+In this method, you:
+1. Tell the system to redraw the widgets by calling setState().
+2. Clear the current search list and reset the count, start and end positions.
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 361
+
+--- PAGE 362 ---
+3. Check to make sure the search text hasn’t already been added to the previous 
+search list.
+4. Add the search item to the previous search list.
+5. Save previous searches.
+Adding a search button
+Next, you’ll add a search button that saves terms each time the user performs a 
+search.
+In _buildSearchCard(), replace the const Icon(Icons.search) with the 
+following:
+IconButton( 
+  icon: const Icon(Icons.search), 
+  // 1 
+  onPressed: () { 
+    // 2 
+    startSearch(searchTextController.text); 
+    // 3 
+    final currentFocus = FocusScope.of(context); 
+    if (!currentFocus.hasPrimaryFocus) { 
+      currentFocus.unfocus(); 
+    } 
+  }, 
+),
+This replaces the icon with an IconButton that the user can tap to perform a search.
+1. Add onPressed to handle the tap event.
+2. Use the current search text to start a search.
+3. Hide the keyboard by using the FocusScope class.
+Next, replace everything in between // *** Start Replace and // *** End 
+Replace with:
+Expanded( 
+  // 3 
+  child: TextField( 
+    decoration: const InputDecoration( 
+      border: InputBorder.none, hintText: 'Search'), 
+    autofocus: false, 
+    // 4 
+    textInputAction: TextInputAction.done, 
+    // 5
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 362
+
+--- PAGE 363 ---
+    onSubmitted: (value) { 
+      if (!previousSearches.contains(value)) { 
+        previousSearches.add(value); 
+        savePreviousSearches(); 
+      } 
+    }, 
+    controller: searchTextController, 
+  )), 
+// 6 
+PopupMenuButton<String>( 
+  icon: const Icon( 
+    Icons.arrow_drop_down, 
+    color: lightGrey, 
+  ), 
+  // 7 
+  onSelected: (String value) { 
+    searchTextController.text = value; 
+    startSearch(searchTextController.text); 
+  }, 
+  itemBuilder: (BuildContext context) { 
+    // 8 
+    return previousSearches 
+      .map<CustomDropdownMenuItem<String>>((String value) { 
+        return CustomDropdownMenuItem<String>( 
+          text: value, 
+          value: value, 
+           callback: () { 
+              setState(() { 
+                // 9 
+                previousSearches.remove(value); 
+                Navigator.pop(context); 
+              }); 
+            }, 
+        ); 
+      }).toList(); 
+      }, 
+    ),
+In this code, you:
+3. Add a TextField to enter your search queries.
+4. Set the keyboard action to TextInputAction.done. This closes the keyboard 
+when the user presses the Done button.
+5. Save the search when the user ﬁnishes entering text.
+6. Create a PopupMenuButton to show previous searches.
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 363
+
+--- PAGE 364 ---
+7. When the user selects an item from previous searches, start a new search.
+8. Build a list of custom drop-down menus (see widgets/custom_dropdown.dart) 
+to display previous searches.
+9. If the X icon is pressed, remove the search from the previous searches and close 
+the pop-up menu.
+To show the list of previous text searches, you used a text ﬁeld with a drop-down 
+menu. That is a row with a TextField and a CustomDropdownMenuItem. The menu 
+item shows the search term and an icon on the right. It will look something like:
+Clicking the X will delete the corresponding entry from the list.
+T est the app
+It’s time to test the app. Because you added a new dependency, quit the running 
+instance and run it again (Note that you do not always need to restart when adding 
+dependencies). You’ll see something like this:
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 364
+
+--- PAGE 365 ---
+The PopupMenuButton displays a menu when tapped and calls the method 
+onSelected() when the user selects a menu item.
+Enter a food item like pastas and make sure that, when you hit the search button, 
+the app adds your search entry to the drop-down list.
+Don’t worry about the progress circle running — that happens when there’s no data. 
+Your app should look like this when you tap the drop-down arrow:
+Now, stop the app by tapping the red stop button.
+Run the app again and tap the drop-down button. The pastas entry is there. It’s time 
+to celebrate :]
+The next step is to use the same approach to save the selected tab.
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 365
+
+--- PAGE 366 ---
+Saving the selected tab
+In this section, you’ll use shared_preferences to save the current UI tab that the user 
+has navigated to.
+Open main_screen.dart and add the following import:
+import 'package:shared_preferences/shared_preferences.dart';
+Next, after:
+List<Widget> pageList = <Widget>[];
+add:
+static const String prefSelectedIndexKey = 'selectedIndex';
+That is the constant you use for the selected index preference key.
+Next, add this new method after initState():
+void saveCurrentIndex() async { 
+  // 1 
+  final prefs = await SharedPreferences.getInstance(); 
+  // 2 
+  prefs.setInt(prefSelectedIndexKey, _selectedIndex); 
+}
+Here, you:
+1. Use the await keyword to wait for an instance of the shared preference plugin.
+2. Save the selected index as an integer.
+Now, add getCurrentIndex():
+void getCurrentIndex() async { 
+  // 1 
+  final prefs = await SharedPreferences.getInstance(); 
+  // 2 
+  if (prefs.containsKey(prefSelectedIndexKey)) { 
+    // 3 
+    setState(() { 
+      _selectedIndex = prefs.getInt(prefSelectedIndexKey); 
+    }); 
+  } 
+}
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 366
+
+--- PAGE 367 ---
+With this code, you:
+1. Use the await keyword to wait for an instance of the shared preference plugin.
+2. Check if a preference for your current index already exists.
+3. Get the current index and update the state accordingly.
+Now, add the following as the last line in initState():
+getCurrentIndex();
+That will retrieve the currently-selected index when the page is loaded.
+Finally, you need to call saveCurrentIndex() when the user taps a tab.
+To do this, add the following to the end of _onItemTapped():
+saveCurrentIndex();
+This saves the current index every time the user selects a different tab.
+Now, build and run the app and select either the second or the third tab.
+Quit the app and run it again to make sure the app uses the saved index when it 
+starts.
+At this point, your app should show a list of previously-searched items and also take 
+you to the last selected tab when you start the app again. Here’s a sample:
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 367
+
+--- PAGE 368 ---
+Congratulations! You’ve saved state for both the current tab and any previous 
+searches the user made.
+Key points
+• There are multiple ways to save data in an app: to ﬁles, in shared preferences and 
+to a SQLite database.
+• Shared preferences are best used to store simple, key-value pairs of primitive types 
+like strings, numbers and Booleans.
+• An example of when to use shared preferences is to save the tab a user is viewing, 
+so the next time the user starts the app, they’re brought to the same tab.
+• The async/await keyword pair let you run asynchronous code off the main UI 
+thread and then wait for the response. An example is getting an instance of 
+SharedPreferences.
+• The shared_preferences plugin should not be used to hold sensitive data. Instead, 
+consider using the ﬂutter_secure_storage plugin.
+Where to go from here?
+In this chapter, you learned how to persist simple data types in your app using the 
+shared_preferences plugin.
+If you want to learn more about Android SharedPreferences, go to https://
+developer.android.com/reference/kotlin/android/content/SharedPreferences?hl=en.
+For iOS, check UserDefaults https://developer.apple.com/documentation/
+foundation/userdefaults.
+In the next chapter, you’ll continue building the same app and learn how to serialize 
+JSON in preparation for getting data from the internet. See you there!
+Flutter Apprentice Chapter 9: Shared Preferences
+raywenderlich.com 368
+
