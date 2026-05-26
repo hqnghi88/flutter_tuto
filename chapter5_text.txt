@@ -1,0 +1,1031 @@
+--- PAGE 152 ---
+5
+Chapter 5: Scrollable 
+Widgets
+By Vincent Ngo
+Building scrollable content is an essential part of UI development. There’s only so 
+much information a user can process at a time, let alone ﬁt on an entire screen in the 
+palm of your hand!
+In this chapter, you’ll learn everything you need to know about scrollable widgets. In 
+particular, you’ll learn:
+• How to use ListView.
+• How to nest scroll views.
+• How to leverage the power of GridView.
+You’ll continue to build your recipe app, Fooderlich, by adding two new screens: 
+Explore and Recipes.
+raywenderlich.com 152
+
+--- PAGE 153 ---
+The ﬁrst shows popular recipes for the day along with what your friends are cooking.
+The second displays a library of recipes, handy if you’re still on the fence about what 
+to cook today. :]
+By the end of this chapter, you’ll be a scrollable widget wizard!
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 153
+
+--- PAGE 154 ---
+Getting started
+Open the starter project in Android Studio, then run flutter pub get if necessary 
+and run the app.
+You’ll see the Fooderlich app from the previous chapter:
+Project ﬁles
+There are new ﬁles in this starter project to help you out. Before you learn how to 
+create scrollable widgets, take a look at them.
+Assets folder
+The assets directory contains all JSON ﬁles and images that you’ll use to build your 
+app.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 154
+
+--- PAGE 155 ---
+Sample images
+• food_pics: Contains the food pictures you’ll display throughout the app.
+• magazine_pics: All the food magazine background images you’ll display on card 
+widgets.
+• proﬁle_pics: Contains raywenderlich.com team member pictures.
+JSON Data
+The sample_data directory contains three JSON ﬁles:
+• sample_explore_recipes.json: A list of recipes to display on the home screen. 
+Sometimes, users might want recommendations for what to cook today!
+• sample_friends_feed.json: This list contains samples of your friends’ posts, in 
+case you’re curious about what your friends are cooking up! /lastresorthighsurrogate/lastresortlowsurrogate
+#
+• sample_recipes.json: A list of recipes including details about the duration and 
+cooking difﬁculty of each.
+New classes
+In the lib directory, you’ll also notice three new folders, as shown below:
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 155
+
+--- PAGE 156 ---
+API folder
+The api folder contains a mock service class.
+MockFooderlichService is a service class that mocks a server response. It has 
+async functions that wait for a sample JSON ﬁle to be read and decoded to recipe 
+model objects.
+In this chapter, you’ll use two API calls:
+• getExploreData(): Returns ExploreData. Internally, it makes a batch request and 
+returns two lists: recipes to explore and friend posts.
+• getRecipes(): Returns the list of recipes.
+Note: Unfamiliar with how async works in Dart? Check out the asynchronous 
+chapter in Dart Apprentice or read this article to learn more:https://dart.dev/
+codelabs/async-await.
+Pro tip: Sometimes your back-end service is not ready to consume. Creating a 
+mock service object is a ﬂexible way to build your UI. Instead of creating many 
+recipe mock objects, all you have to do is change a JSON ﬁle.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 156
+
+--- PAGE 157 ---
+Models folder
+You’ll use these six model objects to build your app’s UI:
+• ExploreRecipe: All of the details about a recipe. It contains ingredients, 
+instructions, duration and a whole lot more.
+• Ingredient: A single ingredient. This is part of ExploreRecipe.
+• Instruction: A single instruction to cook the recipe. It’s part of ExploreRecipe.
+• Post: Describes a friend’s post. A post is similar to a tweet and represents what 
+your social network is cooking.
+• ExploreData: Groups two datasets. It contains a list of ExploreRecipes and a list 
+of Posts.
+• SimpleRecipe: How difﬁcult a recipe is to cook.
+Feel free to explore the different properties each model object contains!
+Note: models.dart is a barrel ﬁle. It exports all your model objects and makes 
+it convenient to import them later on. Think of this as grouping many imports 
+into a single ﬁle.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 157
+
+--- PAGE 158 ---
+Components folder
+lib/components contains all your custom widgets.
+Note: components.dart is another barrel ﬁle that groups all imports in a 
+single ﬁle.
+Open home.dart and check out pages.
+static List<Widget> pages = <Widget>[ 
+  Card1( 
+    recipe: ExploreRecipe( 
+      authorName: 'Ray Wenderlich', 
+      title: 'The Art of Dough', 
+      subtitle: 'Editor\'s Choice', 
+      message: 'Learn to make the perfect bread.', 
+      backgroundImage: 'assets/magazine_pics/mag1.jpg')), 
+  Card2( 
+    recipe: ExploreRecipe( 
+      authorName: 'Mike Katz', 
+      role: 'Smoothie Connoisseur', 
+      profileImage: 'assets/profile_pics/person_katz.jpeg', 
+      title: 'Recipe', 
+      subtitle: 'Smoothies', 
+      backgroundImage: 'assets/magazine_pics/mag2.png')), 
+  Card3( 
+    recipe: ExploreRecipe( 
+      title: 'Vegan Trends', 
+      tags: [ 
+        'Healthy', 'Vegan', 'Carrots', 'Greens', 'Wheat', 
+        'Pescetarian', 'Mint', 'Lemongrass', 
+        'Salad', 'Water' 
+      ], 
+      backgroundImage: 'assets/magazine_pics/mag3.png')), 
+];
+As you can see above, every single Card now requires an ExploreRecipe instance.
+That’s it for getting up to speed on the new starter project ﬁles!
+Now that you have a mock service and model objects, you can focus on scrollable 
+widgets!
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 158
+
+--- PAGE 159 ---
+Introducing ListView
+ListView is a very popular Flutter component. It’s a linear scrollable widget that 
+arranges its children linearly and supports horizontal and vertical scrolling.
+Fun fact: Column and Row widgets are like ListView but without the scroll 
+view.
+Introducing Constructors
+A ListView has four constructors:
+• The default constructor takes an explicit list of widgets called children. That will 
+construct every single child in the list, even the ones that aren’t visible. You should 
+use this if you have a small number of children.
+• ListView.builder() takes in an IndexedWidgetBuilder and builds the list on 
+demand. It will only construct the children that are visible onscreen. You should 
+use this if you need to display a large or inﬁnite number of items.
+• ListView.separated() takes two IndexedWidgetBuilders: itemBuilder and 
+seperatorBuilder. This is useful if you want to place a separator widget between 
+your items.
+• ListView.custom() gives you more ﬁne-grain control over your child items.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 159
+
+--- PAGE 160 ---
+Note: For more details about ListView constructors, check out the ofﬁcial 
+documentation: https://api.ﬂutter.dev/ﬂutter/widgets/ListView-class.html
+Next, you’ll learn how to use the ﬁrst three constructors!
+Setting up ExploreScreen
+The ﬁrst screen you’ll create is the ExploreScreen. It contains two sections:
+• TodayRecipeListView: A horizontal scroll view that lets you pan through 
+different cards.
+• FriendPostListView: A vertical scroll view that shows what your friends are 
+cooking.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 160
+
+--- PAGE 161 ---
+In the lib folder, create a new directory called screens.
+Within the new directory, create a new ﬁle called explore_screen.dart and add the 
+following code:
+import 'package:flutter/material.dart'; 
+import '../api/mock_fooderlich_service.dart'; 
+import '../components/components.dart'; 
+ 
+class ExploreScreen extends StatelessWidget { 
+  // 1 
+  final mockService = MockFooderlichService(); 
+ 
+  ExploreScreen({Key key}) : super(key: key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // 2 
+    // TODO 1: Add TodayRecipeListView FutureBuilder 
+    return const Center( 
+      child: Text('Explore Screen')); 
+  } 
+}
+Here’s how the code works:
+1. Create a MockFooderlichService, to mock server responses.
+2. Display a placeholder text. You’ll replace this later.
+Setting up the bottom navigation bar
+Open home.dart and replace BottomNavigationBar’s items with the following:
+const BottomNavigationBarItem( 
+  icon: Icon(Icons.explore), label: 'Explore'), 
+const BottomNavigationBarItem( 
+  icon: Icon(Icons.book), label: 'Recipes'), 
+const BottomNavigationBarItem( 
+  icon: Icon(Icons.list), label: 'To Buy'),
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 161
+
+--- PAGE 162 ---
+Here, you’re just updating the icons and the labels of each 
+BottomNavigationBarItem.
+Updating the navigation pages
+In home.dart, replace pages with the following:
+static List<Widget> pages = <Widget>[ 
+  ExploreScreen(), 
+  // TODO: Replace with RecipesScreen 
+  Container(color: Colors.green), 
+  Container(color: Colors.blue) 
+];
+This will display the newly created ExploreScreen in the ﬁrst tab.
+Make sure the new ExploreScreen has imported. If your IDE didn’t add it 
+automatically, add this import:
+import 'screens/explore_screen.dart';
+Hot restart the app. It will look like this:
+Note: Perform a hot restart, or fully restart the app, if you don’t see the three 
+tabs as above.
+You’ll replace the Containers later in this chapter.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 162
+
+--- PAGE 163 ---
+Creating a FutureBuilder
+How do you display your UI with an asynchronous task?
+MockFooderlichService contains asynchronous functions that return a Future 
+object. FutureBuilder comes in handy here, as it helps you determine the state of a 
+future. For example, it tells you whether data is still loading or the fetch has ﬁnished.
+In explore_screen.dart, replace the return statement below the comment // TODO 
+1: Add TodayRecipeListView FutureBuilder and the existing return statement 
+with the following code:
+// 1 
+return FutureBuilder( 
+    // 2 
+    future: mockService.getExploreData(), 
+    // 3 
+    builder: (context, snapshot) { 
+      // TODO: Add Nested List Views 
+      // 4 
+      if (snapshot.connectionState == ConnectionState.done) { 
+        // 5 
+        final recipes = snapshot.data.todayRecipes; 
+        // TODO: Replace this with TodayRecipeListView 
+        return Center( 
+            child: Container( 
+                child: const Text('Show TodayRecipeListView'))); 
+      } else { 
+        // 6 
+        return const Center( 
+            child: CircularProgressIndicator()); 
+      } 
+    });
+Here’s what the code does:
+1. Within the widget’s build(), you create a FutureBuilder.
+2. The FutureBuilder takes in a Future as a parameter. getExploreData() 
+creates a future that will, in turn, return an ExploreData instance. That instance 
+will contain two lists, todayRecipes and friendPosts.
+3. Within builder, you use snapshot to check the current state of the Future.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 163
+
+--- PAGE 164 ---
+4. Now, the Future is complete and you can extract the data to pass to your widget.
+5. snapshot.data returns ExploreData, from which you extract todayRecipes to 
+pass to the list view. Right now, you show a simple text as placeholder. You’ll 
+build a TodayRecipeListView soon.
+6. The future is still loading, so you show a spinner to let the user know something 
+is happening.
+Note: For more information, check out Flutter’s FutureBuilder 
+documentation: https://api.ﬂutter.dev/ﬂutter/widgets/FutureBuilder-
+class.html.
+Perform a hot reload. You’ll see the loading spinner ﬁrst. After the future completes, 
+it shows the placeholder text.
+Now that you’ve set up the loading UI, it’s time to build the actual list view!
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 164
+
+--- PAGE 165 ---
+Building Recipes of the Day
+The ﬁrst scrollable component you’ll build is TodayRecipeListView. This is the top 
+section of the ExploreScreen. It will be a horizontal list view.
+In lib/components, create a new ﬁle called today_recipe_list_view.dart. Add the 
+following code:
+import 'package:flutter/material.dart'; 
+// 1 
+import '../components/components.dart'; 
+import '../models/models.dart'; 
+ 
+class TodayRecipeListView extends StatelessWidget { 
+  // 2 
+  final List<ExploreRecipe> recipes; 
+ 
+  const TodayRecipeListView({Key key, this.recipes}) 
+    : super(key: key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // 3 
+    return Padding( 
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 
+16), 
+      // 4 
+      child: Column( 
+        crossAxisAlignment: CrossAxisAlignment.start, 
+        children: [ 
+          // 5 
+          Text( 
+            'Recipes of the Day 
+# ', 
+            style: Theme.of(context).textTheme.headline1), 
+          // 6 
+          const SizedBox(height: 16), 
+          // 7 
+          Container( 
+            height: 400, 
+            // TODO: Add ListView Here 
+            color: Colors.grey, 
+          ) 
+        ] 
+      ) 
+    ); 
+  } 
+}
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 165
+
+--- PAGE 166 ---
+Here’s how the code works:
+1. Import the barrel ﬁles, component.dart and models.dart, so you can use data 
+models and UI components.
+2. TodayRecipeListView needs a list of recipes to display.
+3. Within build(), start by applying some padding.
+4. Add a Column to place widgets in a vertical layout.
+5. In the column, add a Text. This is the header for the Recipes of the Day.
+6. Add a 16-point-tall SizedBox, to supply some padding.
+7. Add a Container, 400 points tall, and set the background color to grey. This 
+container will hold your horizontal list view.
+Adding T odayRecipeListView
+Open components.dart and add the following export:
+export 'today_recipe_list_view.dart';
+This means you don’t have to call additional imports when you use the new 
+component.
+Next, open explore_screen.dart and replace the return statement below the 
+comment // TODO: Replace this with TodayRecipeListView with the 
+following:
+return TodayRecipeListView(recipes: recipes);
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 166
+
+--- PAGE 167 ---
+If your app is still running, it will now look like this:
+Now it’s ﬁnally time to add the ListView.
+Adding the ListView
+In today_recipe_list_view.dart, replace the comment // TODO: Add ListView 
+Here with the following:
+// 1 
+color: Colors.transparent, 
+// 2 
+child: ListView.separated( 
+  // 3 
+  scrollDirection: Axis.horizontal, 
+  // 4 
+  itemCount: recipes.length, 
+  // 5 
+  itemBuilder: (context, index) { 
+    // 6 
+    final recipe = recipes[index]; 
+    return buildCard(recipe); 
+  }, 
+  // 7 
+  separatorBuilder: (context, index) { 
+    // 8 
+    return const SizedBox(width: 16); 
+})
+Make sure to delete the existing color of the container.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 167
+
+--- PAGE 168 ---
+Here’s how the code works:
+1. Change the color from grey to transparent.
+2. Create ListView.separated. Remember, this widget creates two 
+IndexedWidgetBuilders.
+3. Set the scroll direction to the horizontal axis.
+4. Set the number of items in the list view.
+5. Create the itemBuilder callback, which will go through every item in the list.
+6. Get the recipe for the current index and build the card.
+7. Create the separatorBuilder callback, which will go through every item in the 
+list.
+8. For every item, you create a SizedBox to space every item 16 points apart.
+Next, you need to actually build the card. just below build(), add the following:
+Widget buildCard(ExploreRecipe recipe) { 
+  if (recipe.cardType == RecipeCardType.card1) { 
+    return Card1(recipe: recipe); 
+  } else if (recipe.cardType == RecipeCardType.card2) { 
+    return Card2(recipe: recipe); 
+  } else if (recipe.cardType == RecipeCardType.card3) { 
+    return Card3(recipe: recipe); 
+  } else { 
+    throw Exception('This card doesn\'t exist yet'); 
+  } 
+}
+This function builds the card for each item. Every ExploreRecipe has a cardType. 
+This helps you determine which Card to create for that recipe.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 168
+
+--- PAGE 169 ---
+Restart, and Fooderlich will now look like this:
+Finally, you can scroll through the list of beautiful recipes for the day. Don’t forget, 
+you can switch the theme in main.dart to dark mode!
+Next, you’ll build the bottom section of ExploreScreen.
+Nested ListViews
+There are two approaches to building the bottom section: the Column approach and 
+the Nested ListView approach. You’ll take a look at each of them now.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 169
+
+--- PAGE 170 ---
+Column approach
+You could put the two list views in a Column. A Column arranges items in a vertical 
+layout, so that makes sense right?
+The diagram shows two rectangular boundaries that represent two scrollable areas.
+The pros and cons to this approach are:
+• TodayRecipeListView is OK because the scroll is in the horizontal direction. All 
+the cards also ﬁt on screen and look great!
+• FriendPostListView scrolls in the vertical direction, but it only has a small scroll 
+area. So as a user, you can’t see very many of your friend’s posts at once.
+This approach has a bad user experience because the content area is too small! The 
+Cards already take up most of the screen. How much room will there be for the 
+vertical scroll area on small devices?
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 170
+
+--- PAGE 171 ---
+Nested ListView approach
+In the second approach, you nest multiple list views in a parent list view.
+The diagram shows one big rectangular boundary.
+ExploreScreen holds the parent ListView. Since there are only two child 
+ListViews, you can use the default constructor, which returns an explicit list of 
+children.
+The beneﬁts of this approach are:
+1. The scroll area is a lot bigger, using 70–80% of the screen.
+2. You can view more of your friends’ posts.
+3. You can continue to scroll TodayRecipeListView in the horizontal direction.
+4. When you scroll upward, Flutter actually listens to the scroll event of the parent 
+ListView. So it will scroll both TodayRecipeListView and FriendPostListView 
+upwards, giving you more room to view all the content!
+Nested ListView sounds like a better approach, doesn’t it?
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 171
+
+--- PAGE 172 ---
+Adding the Nested ListView
+First, open explore_screen.dart and replace build() with the following:
+@override 
+Widget build(BuildContext context) { 
+  // 1 
+  return FutureBuilder( 
+    // 2 
+    future: mockService.getExploreData(), 
+    // 3 
+    builder: (context, snapshot) { 
+      // 4 
+      if (snapshot.connectionState == ConnectionState.done) { 
+        // 5 
+        return ListView( 
+          // 6 
+          scrollDirection: Axis.vertical, 
+          children: [ 
+            // 7 
+            TodayRecipeListView(recipes: 
+snapshot.data.todayRecipes), 
+            // 8 
+            const SizedBox(height: 16), 
+            // 9 
+            // TODO: Replace this with FriendPostListView 
+            Container(height: 400, color: Colors.green) 
+          ] 
+        ); 
+      } else { 
+        // 10 
+        return const Center(child: CircularProgressIndicator()); 
+      } 
+    } 
+  ); 
+}
+Here’s how the code works:
+1. This is the FutureBuilder from before. It runs an asynchronous task and lets 
+you know the state of the future.
+2. Use your mock service to call getExploreData(). This returns an ExploreData 
+object future.
+3. Check the state of the future within the builder callback.
+4. Check if the future is complete.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 172
+
+--- PAGE 173 ---
+5. When the future is complete, return the primary ListView. This holds an explicit 
+list of children. In this scenario, the primary ListView will hold the other two 
+ListViews as children.
+6. Set the scroll direction to vertical, although that’s the default value.
+7. The ﬁrst item in children is TodayRecipeListView. You pass in the list of 
+todayRecipes from ExploreData.
+8. Add a 16-point vertical space so the lists aren’t too close to each other.
+9. Add a green placeholder container. You’ll create and add the 
+FriendPostListView later.
+10. If the future hasn’t ﬁnished loading yet, show a circular progress indicator.
+Your app now looks like this:
+Notice that you can still scroll the Cards horizontally. When you scroll up and down, 
+you’ll notice the entire area scrolls!
+Now that you have the desired scroll behavior, it’s time to build 
+FriendPostListView.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 173
+
+--- PAGE 174 ---
+Creating FriendPostListView
+First, you’ll create the items for the list view to display. When those are ready, you’ll 
+build a vertical list view to display them.
+Here’s how FriendPostTile will look:
+It’s time to get started!
+Building FriendPostTile
+Within lib/components, create a new ﬁle called friend_post_tile.dart. Add the 
+following code:
+import 'package:flutter/material.dart'; 
+import '../models/models.dart'; 
+import '../components/components.dart'; 
+ 
+class FriendPostTile extends StatelessWidget { 
+  final Post post; 
+ 
+  const FriendPostTile({Key key, this.post}) : super(key: key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // 1 
+    return Row( 
+      crossAxisAlignment: CrossAxisAlignment.start, 
+      mainAxisAlignment: MainAxisAlignment.start, 
+      children: [ 
+        // 2 
+        CircleImage(imageProvider: 
+AssetImage(post.profileImageUrl), 
+            imageRadius: 20), 
+        // 3 
+        const SizedBox(width: 16), 
+        // 4 
+        Expanded( 
+            // 5 
+            child: Column( 
+                crossAxisAlignment: CrossAxisAlignment.start, 
+                children: [ 
+                  // 6 
+                  Text(post.comment),
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 174
+
+--- PAGE 175 ---
+                  // 7 
+                  Text('${post.timestamp} mins ago', 
+                      style: const TextStyle(fontWeight: 
+FontWeight.w700)) 
+                ])) 
+      ]); 
+  } 
+}
+Here’s how the code works:
+1. Create a Row to arrange the widgets horizontally.
+2. The ﬁrst element is a circular avatar, which displays the image asset associated 
+with the post.
+3. Apply a 16-point padding.
+4. Create Expanded, which makes the children ﬁll the rest of the container.
+5. Establish a Column to arrange the widgets vertically.
+6. Create a Text to display your friend’s comments.
+7. Create another Text to display the timestamp of a post.
+Note: There’s no height restriction on FriendPostTile. That means the text 
+can expand to many lines as long as it’s in a scroll view! This is like iOS’s 
+dynamic table views and autosizing TextViews in Android.
+Open components.dart and add the following:
+export 'friend_post_tile.dart';
+Now, it’s time to create your vertical ListView.
+Creating FriendPostListView
+In lib/components, create a new ﬁle called friend_post_list_view.dart and add the 
+following code:
+import 'package:flutter/material.dart'; 
+import '../models/models.dart'; 
+import 'components.dart'; 
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 175
+
+--- PAGE 176 ---
+class FriendPostListView extends StatelessWidget { 
+  // 1 
+  final List<Post> friendPosts; 
+ 
+  const FriendPostListView({Key key, this.friendPosts}) : 
+super(key: key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // 2 
+    return Padding( 
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 
+0), 
+        // 3 
+        child: Column( 
+          crossAxisAlignment: CrossAxisAlignment.start, 
+          children: [ 
+            // 4 
+            Text( 
+              'Social Chefs 
+! ', 
+              style: Theme.of(context).textTheme.headline1), 
+            // 5 
+            const SizedBox(height: 16), 
+            // TODO: Add PostListView here 
+            // 6 
+            const SizedBox(height: 16), 
+        ])); 
+  }
+}
+Here’s how the code works:
+1. FriendPostListView requires a list of Posts.
+2. Apply a left and right padding widget of 16 points.
+3. Create a Column to position the Text followed by the posts in a vertical layout.
+4. Create the Text widget header.
+5. Apply a spacing of 16 points vertically.
+6. Leave some padding at the end of the list.
+Next, add the following code below // TODO: Add PostListView here:
+// 1 
+ListView.separated( 
+  // 2 
+  primary: false,
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 176
+
+--- PAGE 177 ---
+  // 3 
+  physics: const NeverScrollableScrollPhysics(), 
+  // 4 
+  shrinkWrap: true, 
+  scrollDirection: Axis.vertical, 
+  itemCount: friendPosts.length, 
+  itemBuilder: (context, index) { 
+    // 5 
+    final post = friendPosts[index]; 
+    return FriendPostTile(post: post); 
+  }, 
+  separatorBuilder: (context, index) { 
+    // 6 
+    return const SizedBox(height: 16); 
+  }),
+Here’s how you deﬁned the new ListView:
+1. Create ListView.separated with two IndexWidgetBuilder callbacks.
+2. Since you’re nesting two list views, it’s a good idea to set primary to false. That 
+lets Flutter know that this isn’t the primary scroll view.
+3. Set the scrolling physics to NeverScrollableScrollPhysics. Even though you 
+set primary to false, it’s also a good idea to disable the scrolling for this list view. 
+That will propagate up to the parent list view.
+4. Set shrinkWrap to true to create a ﬁxed-length scrollable list of items. This 
+gives it a ﬁxed height. If this were false, you’d get an unbounded height error.
+5. For every item in the list, create a FriendPostTile.
+6. For every item, also create a SizedBox to space each item by 16 points.
+Note: There are several different types of scroll physics you can play with:
+AlwaysScrollableScrollPhysics
+BouncingScrollPhysics
+ClampingScrollPhysics
+FixedExtentScrollPhysics
+NeverScrollableScrollPhysics
+PageScrollPhysicsRange
+MaintainingScrollPhysics
+Find more details at https://api.ﬂutter.dev/ﬂutter/widgets/ScrollPhysics-
+class.html.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 177
+
+--- PAGE 178 ---
+Open components.dart and add the following export:
+export 'friend_post_list_view.dart';
+And that’s it. Now, you’ll just ﬁnish up ExploreScreen and your app will have a cool 
+new feature!
+Adding ﬁnal touches for ExploreScreen
+Open explore_screen.dart and replace the code below the comment // TODO: 
+Replace this with FriendPostListView with the following:
+FriendPostListView(friendPosts: snapshot.data.friendPosts),
+Here, you create a FriendPostListView and extract friendPosts from 
+ExploreData.
+Restart or hot reload the app. The ﬁnal Explore screen should look like the following 
+in light mode:
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 178
+
+--- PAGE 179 ---
+Here’s what it looks like in dark mode:
+Aren’t nested scroll views a neat technique? :]
+Now, it’s time to play with grid views.
+Getting to Know GridView
+GridView is a 2D array of scrollable widgets. It arranges the children in a grid and 
+supports horizontal and vertical scrolling.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 179
+
+--- PAGE 180 ---
+Getting used to GridView is easy. Like ListView, it inherits from ScrollView, so 
+their constructors are very similar.
+GridView has ﬁve types of constructors:
+• The default takes an explicit list of widgets.
+• GridView.builder()
+• GridView.count()
+• GridView.custom()
+• GridView.extent()
+The builder() and count() constructors are the most common. You’ll have no 
+problem getting used to these since ListView uses similar ones.
+Key parameters
+Here are some parameters you should pay attention to:
+• crossAxisSpacing: The spacing between each child in the cross axis.
+• mainAxisSpacing: The spacing between each child on the main axis.
+• crossAxisCount: The number of children in the cross axis. You can also think of 
+this as the number of columns you want in a grid.
+• shrinkWrap. Controls the ﬁxed scroll area size.
+• physics: Controls how the scroll view responds to user input.
+• primary: Helps Flutter determine which scroll view is the primary one.
+• scrollDirection: Controls the axis along which the view will scroll.
+Note GridView has a plethora of parameters to experiment and play with. 
+Check out Greg Perry’s article to learn more: https://medium.com/
+@greg.perry/decode-gridview-9b123553e604.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 180
+
+--- PAGE 181 ---
+Understanding the cross and main axis?
+What’s the difference between the main and cross axis? Remember that Columns 
+and Rows are like ListViews, but without a scroll view.
+The main axis always corresponds to the scroll direction!
+If your scroll direction is horizontal, you can think of this as a Row. The main axis 
+represents the horizontal direction, as shown below:
+If your scroll direction is vertical, you can think of it as a Column. The main axis 
+represents the vertical direction, as shown below:
+Grid delegates
+Grid delegates help ﬁgure out the spacing and the number of columns to use to lay 
+out the children in a GridView.
+Aside from customizing your own grid delegates, Flutter provides two delegates you 
+can use out of the box:
+• SliverGridDelegateWithFixedCrossAxisCount
+• SliverGridDelegateWithMaxCrossAxisExtent
+The ﬁrst creates a layout that has a ﬁxed number of tiles along the cross axis. The 
+second creates a layout with tiles that have a maximum cross axis extent.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 181
+
+--- PAGE 182 ---
+Building the Recipes screen
+You are now ready to build the Recipes screen! In the screens directory, create a new 
+ﬁle called recipes_screen.dart. Add the following code:
+import 'package:flutter/material.dart'; 
+import '../api/mock_fooderlich_service.dart'; 
+import '../components/components.dart'; 
+ 
+class RecipesScreen extends StatelessWidget { 
+  // 1 
+  final exploreService = MockFooderlichService(); 
+ 
+  RecipesScreen({Key key}) : super(key: key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // 2 
+    return FutureBuilder( 
+        // 3 
+        future: exploreService.getRecipes(), 
+        builder: (context, snapshot) { 
+          // 4 
+          if (snapshot.connectionState == ConnectionState.done) 
+{ 
+            // TODO: Add RecipesGridView Here 
+            // 5 
+            return const Center(child: Text('Recipes Screen')); 
+          } else { 
+            // 6 
+            return const Center(child: 
+CircularProgressIndicator()); 
+          } 
+        }); 
+  } 
+}
+The code has a similar setup to ExploreScreen. To create it, you:
+1. Create a mock service.
+2. Create a FutureBuilder.
+3. Use getRecipes() to return the list of recipes to display. This function returns a 
+future list of SimpleRecipes.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 182
+
+--- PAGE 183 ---
+4. Check if the future is complete.
+5. Add a placeholder text until you build RecipesGridView.
+6. Show a circular loading indicator if the future isn’t complete yet.
+In home.dart, replace pages with:
+static List<Widget> pages = <Widget>[ 
+  ExploreScreen(), 
+  RecipesScreen(), 
+  Container(color: Colors.blue) 
+];
+Next, add the following import:
+import 'screens/recipes_screen.dart';
+Perform a hot restart or rebuild and run the app to see the start of the new recipes 
+screen:
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 183
+
+--- PAGE 184 ---
+Creating the recipe thumbnail
+Before you create the grid view, you need a widget to display in the grid. Here’s the 
+thumbnail widget you’ll create:
+It’s a simple tile that displays the picture, the name and the duration of a recipe.
+In lib/components, create a new ﬁle called recipe_thumbnail.dart and add the 
+following code:
+import 'package:flutter/material.dart'; 
+import '../models/models.dart'; 
+ 
+class RecipeThumbnail extends StatelessWidget { 
+  // 1 
+  final SimpleRecipe recipe; 
+ 
+  const RecipeThumbnail({Key key, this.recipe}) : super(key: 
+key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // 2 
+    return Container( 
+      padding: const EdgeInsets.all(8), 
+      // 3 
+      child: Column( 
+        crossAxisAlignment: CrossAxisAlignment.start, 
+        children: [ 
+          // 4 
+          Expanded( 
+                  // 5 
+                  child: ClipRRect( 
+                      child: Image.asset('${recipe.dishImage}', 
+                          fit: BoxFit.cover), 
+                      borderRadius: BorderRadius.circular(12))), 
+          // 6 
+          const SizedBox(height: 10), 
+          // 7
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 184
+
+--- PAGE 185 ---
+          Text( 
+              recipe.title, 
+              maxLines: 1, 
+              style: Theme.of(context).textTheme.bodyText1), 
+          Text( 
+              recipe.duration, 
+              style: Theme.of(context).textTheme.bodyText1) 
+        ] 
+      ) 
+    ); 
+  } 
+}
+Here’s how the code works:
+1. This class requires a SimpleRecipe as a parameter. That helps conﬁgure your 
+widget.
+2. Create a Container with 8-point padding all around.
+3. Use a Column to apply a vertical layout.
+4. The ﬁrst element of the column is Expanded. That widget holds on to a 
+Container, which will then hold on to your Image. You want the image to ﬁll the 
+remaining space.
+5. The Image is within the ClipRRect, which clips the image to make the borders 
+rounded.
+6. Add some room between the image and the other widgets.
+7. Add the remaining Texts: one to display the recipe’s title and another to display 
+the duration.
+Next, open components.dart and add the following export:
+export 'recipe_thumbnail.dart';
+Now, you’re ready to create your grid view!
+Creating RecipesGridView
+In lib/components, create a new ﬁle called recipes_grid_view.dart and add the 
+following code:
+import 'package:flutter/material.dart'; 
+import '../components/components.dart';
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 185
+
+--- PAGE 186 ---
+import '../models/models.dart'; 
+ 
+class RecipesGridView extends StatelessWidget { 
+  // 1 
+  final List<SimpleRecipe> recipes; 
+ 
+  const RecipesGridView({Key key, this.recipes}) : super(key: 
+key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // 2 
+    return Padding( 
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 
+16), 
+        // 3 
+        child: GridView.builder( 
+            // 4 
+            itemCount: recipes.length, 
+            // 5 
+            gridDelegate: 
+                const SliverGridDelegateWithFixedCrossAxisCount( 
+                  crossAxisCount: 2), 
+            itemBuilder: (context, index) { 
+              // 6 
+              final simpleRecipe = recipes[index]; 
+              return RecipeThumbnail(recipe: simpleRecipe); 
+            })); 
+  } 
+}
+A GridView is similar to a ListView. Here’s how it works:
+1. RecipesGridView requires a list of recipes to display in a grid.
+2. Apply a 16 point padding on the left, right, and top.
+3. Create a GridView.builder, which displays only the items visible onscreen.
+4. Tell the grid view how many items will be in the grid.
+5. Add SliverGridDelegateWithFixedCrossAxisCount and set the 
+crossAxisCount to 2. That means that there will be only two columns.
+6. For every index, fetch the recipe and create a corresponding RecipeThumbnail.
+Open components.dart and add the following export:
+export 'recipes_grid_view.dart';
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 186
+
+--- PAGE 187 ---
+Adding RecipesGridView
+Open recipes_screen.dart and replace the return statement below the comment // 
+TODO: Add RecipesGridView Here with the following:
+return RecipesGridView(recipes: snapshot.data);
+When the list of recipes has been loaded this will display them in a grid layout.
+Congratulations, you’ve now set up your RecipesScreen!
+If you still have your app running, perform a hot reload. The new screen will look like 
+this:
+There are now two unused import statements. Open home.dart and remove the 
+following:
+import 'models/explore_recipe.dart'; 
+import 'components/components.dart';
+And that’s it, you’re done. Congratulations!
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 187
+
+--- PAGE 188 ---
+Other scrollable widgets
+There are many more scrollable widgets for various use cases. Here are some not 
+covered in this chapter:
+• PageView: A scrollable widget that scrolls page by page, making it perfect for an 
+onboarding ﬂow. It also supports a vertical scroll direction.
+• CustomScrollView: A widget that creates custom scroll effects using slivers. Ever 
+wonder how to collapse your navigation header on scroll? Slivers and custom 
+scroll views will do that!
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 188
+
+--- PAGE 189 ---
+• StaggeredGridView: A grid view package that supports columns and rows of 
+varying sizes. If you need to support dynamic height and custom layouts, this is 
+the most popular package.
+Now it’s time for some challenges.
+Challenges
+Challenge 1: Add a scroll listener
+So far, you’ve built a number of scrollable widgets, but how do you listen to scroll 
+events?
+For this challenge, try adding a scroll controller to ExploreScreen. Print two 
+statements to the console:
+1. print('i am at the bottom!') if the user scrolls to the bottom.
+2. print('i am at the top!') if the user scrolls to the top.
+You can view the scroll controller API documentation here:https://api.ﬂutter.dev/
+ﬂutter/widgets/ScrollController-class.html.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 189
+
+--- PAGE 190 ---
+Here’s a step-by-step hint:
+1.) Make ExploreScreen a stateful widget.
+2.) Create an instance of ScrollController in the initState().
+3.) Create scrollListener() to listen to the scroll position.
+4.) Add a scroll listener to the scroll controller.
+5.) Add the scroll controller to the ListView.
+6.) Dispose your scroll scrollListener().
+Solution
+See Appendix A.
+Challenge 2: Add a new GridView layout
+Try using SliverGridDelegateWithMaxCrossAxisExtent to create the grid layout 
+below, which displays recipes in only one column:
+Solution
+See Appendix B.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 190
+
+--- PAGE 191 ---
+Key points
+• ListView and GridView support both horizontal and vertical scroll directions.
+• The primary property lets Flutter know which scroll view is the primary scroll 
+view.
+• physics in a scroll view lets you change the user scroll interaction.
+• Especially in a nested list view, remember to set shrinkWrap to true so you can 
+give the scroll view a ﬁxed height for all the items in the list.
+• Use a FutureBuilder to wait for an asynchronous task to complete.
+• You can nest scrollable widgets. For example, you can place a grid view within a 
+list view. Unleash your wildest imagination!
+• Use ScrollController and ScrollNotiﬁcation to control or listen to scroll 
+behavior.
+• Barrel ﬁles are handy to group imports together. They also let you import many 
+widgets using a single ﬁle.
+Where to go from here?
+At this point, you’ve learned how to create ListViews and GridViews. They are much 
+easier to use than iOS’s UITableView and Android’s RecyclerView, right? Building 
+scrollable widgets is an important skill you should master!
+Flutter makes it easy to build and use such scrollable widgets. It offers the ﬂexibility 
+to scroll in any direction and the power to nest scrollable widgets. With the skills 
+you’ve learned, you can build cool scroll interactions.
+You’re ready to look like a pro in front of your friends :]
+For more examples check out the Flutter Gallery at https://gallery.ﬂutter.dev/#/, 
+which showcases some great examples to test out.
+In the next chapter, you’ll take a look at some more interactive widgets.
+Flutter Apprentice Chapter 5: Scrollable Widgets
+raywenderlich.com 191
+

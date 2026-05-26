@@ -1,0 +1,1862 @@
+--- PAGE 192 ---
+6
+Chapter 6: Interactive 
+Widgets
+By Vincent Ngo
+In the previous chapter, you learned how to capture lots of data with scrollable 
+widgets. But how do you make an app more engaging? How do you collect input and 
+feedback from your users?
+In this chapter, you’ll explore interactive widgets. In particular, you’ll learn to create:
+• Gesture-based widgets
+• Time and date picker widgets
+• Input and selection widgets
+• Dismissable widgets
+You’ll continue to work on Fooderlich, building the ﬁnal tab: To Buy. This tab 
+allows the user to create a grocery list of items to buy, make modiﬁcations to them, 
+and check them off their TODO list when they’re done. They’ll be able to add, 
+remove and update the items in the list.
+You’ll also get a quick introduction to Provider, a package that helps you manage 
+state and notify components that there’s updated data to display.
+raywenderlich.com 192
+
+--- PAGE 193 ---
+You’ll start by building an empty screen. If there are no grocery items available, the 
+user has two options:
+1. Click Browse Recipes to view other recipes.
+2. Click the + button to add a new grocery item.
+When the user taps the + button, the app will present a screen for the user to create 
+an item:
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 193
+
+--- PAGE 194 ---
+The screen consists of the following data attributes:
+• The name of the item.
+• A tag that shows the item’s importance level.
+• The date and time when you want to buy this item.
+• The color you want to label this item.
+• The quantity of the item.
+Also, when you create the item, the app will show a preview of the item itself! How 
+cool is that?
+When you create your ﬁrst item, the grocery list replaces the empty screen:
+The user will be able to take four actions on this new screen:
+1. Tap a grocery item to update some information.
+2. Tap the checkbox to mark an item as complete.
+3. Swipe away the item to delete it.
+4. Create and add another item to the list.
+By the end of this chapter, you’ll have built a functional TODO list for users to 
+manage their grocery items. You’ll even add light and dark mode support!
+It’s time to get started.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 194
+
+--- PAGE 195 ---
+Getting started
+Open the starter project in Android Studio and run flutter pub get, if necessary. 
+Then, run the app.
+You’ll see the Fooderlich app from the previous chapter. When you tap the To Buy 
+tab, you’ll see a blue screen. Don’t worry, soon you’ll add an image so your users 
+won’t think there’s a problem.
+Inside assets/fooderlich_assets, you’ll ﬁnd a new image.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 195
+
+--- PAGE 196 ---
+You’ll display empty_list.png when there aren’t any items in the list.
+Now, it’s time to add some code!
+Creating the grocery item model
+First, you’ll set up the model for the information you want to save about the items. In 
+the models directory, create a new ﬁle called grocery_item.dart, then add the 
+following code:
+import 'package:flutter/painting.dart'; 
+ 
+// 1 
+enum Importance { low, medium, high } 
+ 
+class GroceryItem { 
+  // 2 
+  final String id; 
+  // 3 
+  final String name; 
+  final Importance importance; 
+  final Color color; 
+  final int quantity; 
+  final DateTime date; 
+  final bool isComplete; 
+ 
+  GroceryItem( 
+      {this.id, 
+      this.name, 
+      this.importance, 
+      this.color, 
+      this.quantity, 
+      this.date,
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 196
+
+--- PAGE 197 ---
+      this.isComplete = false}); 
+ 
+  // 4 
+  GroceryItem copyWith( 
+      {String id, 
+      String name, 
+      Importance importance, 
+      Color color, 
+      int quantity, 
+      DateTime date, 
+      bool isComplete}) { 
+    return GroceryItem( 
+        id: id ?? this.id, 
+        name: name ?? this.name, 
+        importance: importance ?? this.importance, 
+        color: color ?? this.color, 
+        quantity: quantity ?? this.quantity, 
+        date: date ?? this.date, 
+        isComplete: isComplete ?? this.isComplete); 
+  } 
+}
+Take a moment to explore what grocery_item.dart contains:
+1. Importance is an enum that you’ll use to tag the importance of an item: low, 
+medium or high.
+2. Each GroceryItem must have a unique id to differentiate the items from one 
+other.
+3. A user can set the name, level of importance, color label, quantity and date, as 
+well as marking completed items.
+4. copyWith copies and creates a completely new instance of GroceryItem. This 
+will be useful later, when you manage the state of the items.
+Next, you need to add this new code to the barrel ﬁle.
+Open the models/models.dart barrel ﬁle and add the following:
+export 'grocery_item.dart';
+Note: Remember that the purpose of a barrel ﬁle is to group common Dart 
+ﬁles together. This allows you to group classes that are commonly used 
+together so you only have to import a single ﬁle — in this case, models.dart.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 197
+
+--- PAGE 198 ---
+Creating the Grocery screen
+Now that you’ve set up your model, it’s time to create the Grocery screen. This screen 
+will display one of two views:
+EmptyGroceryScreen will display when there are no items. After the user adds at 
+least one item, you’ll display GroceryListScreen instead.
+Building GroceryScreen
+The ﬁrst thing you need to do is create GroceryScreen, which determines whether 
+to display the empty or list screen.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 198
+
+--- PAGE 199 ---
+Within the screens directory, create a new Dart ﬁle called grocery_screen.dart. 
+Then, add the following code:
+import 'package:flutter/material.dart'; 
+ 
+class GroceryScreen extends StatelessWidget { 
+  const GroceryScreen({Key key}) : super(key: key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // TODO 2: Replace with EmptyGroceryScreen 
+    return Container(color: Colors.green); 
+  } 
+}
+For now, this will just show a green screen. You’ll replace this with something more 
+informative later.
+Displaying the Grocery screen
+Your next task is to give your users a way to see the new page — when it’s ready, that 
+is. When you click on the To Buy tab, it needs to show GroceryScreen, not the solid 
+color.
+Do this by opening home.dart and adding the following import:
+import 'screens/grocery_screen.dart';
+Then, locate // TODO 1: Replace with grocery screen and replace Container 
+with the following:
+const GroceryScreen()
+This substitutes the existing empty container with the new screen.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 199
+
+--- PAGE 200 ---
+With the app running, perform a hot restart, then tap the To Buy tab. You’ll now see 
+a green screen instead of a blue one.
+Great! That’s progress, right? Well, it’ll get better after you create the screens. You’ll 
+start doing that now, with the Grocery screen that will display when the list is empty.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 200
+
+--- PAGE 201 ---
+Creating the empty Grocery screen
+Within the screens directory, create a new Dart ﬁle called 
+empty_grocery_screen.dart and add the following:
+import 'package:flutter/material.dart'; 
+ 
+class EmptyGroceryScreen extends StatelessWidget { 
+  const EmptyGroceryScreen({Key key}) : super(key: key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // TODO 3: Replace and add layout widgets 
+    return Container(color: Colors.purple); 
+  } 
+}
+This is the ﬁrst simple implementation of EmptyGroceryScreen. You’ll replace the 
+placeholder Container with other widgets soon.
+Adding the empty screen
+Before you continue building EmptyGroceryScreen, you need to set up the widget 
+for hot reload so you can see your updates live.
+Open grocery_screen.dart and add the following import:
+import 'empty_grocery_screen.dart';
+Locate  // TODO 2: Replace with EmptyGroceryScreen and replace Container 
+with the following:
+// TODO 4: Add a scaffold widget 
+return const EmptyGroceryScreen();
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 201
+
+--- PAGE 202 ---
+Now, you’ll see the following purple screen:
+Great! Now, you’ll be able to see your changes live after you code them.
+Adding layout widgets
+Next, you’ll lay the foundation for the ﬁnal look of the page by adding widgets that 
+handle the layout of the empty Grocery screen.
+Open empty_grocery_screen.dart and locate // TODO 3: Replace and add 
+layout widgets. Replace the line below it with the following:
+// 1 
+return Padding( 
+  padding: const EdgeInsets.all(30.0), 
+  // 2 
+  child: Center( 
+      // 3 
+      child: Column( 
+        mainAxisAlignment: MainAxisAlignment.center, 
+        children: [ 
+          // TODO 4: Add empty image 
+          // TODO 5: Add empty screen title 
+          // TODO 6: Add empty screen subtitle
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 202
+
+--- PAGE 203 ---
+          // TODO 7: Add browse recipes button 
+        ],),), 
+);
+Here’s what you’ve added:
+1. Padding: Adds 30 pixels on all sides.
+2. Center: Places all the other widgets in the center.
+3. Column: Handles the vertical layouts of the other widgets.
+The app will now look like this:
+Now, it’s time to make your screen more interesting!
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 203
+
+--- PAGE 204 ---
+Adding the visual pieces
+Finally, it’s time to go beyond a colorful screen and add some text and images.
+Locate // TODO 4: Add empty image and replace it with the following:
+AspectRatio( 
+  aspectRatio: 1 / 1, 
+  child: Image.asset('assets/fooderlich_assets/
+empty_list.png'),),
+AspectRatio sizes its child to the speciﬁed aspectRatio. Although aspectRatio is a 
+double, the Flutter documentation recommends writing it as width / height 
+instead of the calculated result. In this case, you want a square aspect ratio of 1 / 1 
+and not 1.0.
+Note: Dart does the calculation for you to provide the double. What if you’d 
+wanted a 16:9 ratio? You’d put 16 / 9 and not 1.5.
+Next, replace // TODO 5: Add empty screen title with the following:
+const SizedBox(height: 8.0), 
+const Text('No Groceries', style: TextStyle(fontSize: 21.0),),
+Here, you added a title using Text, then placed an 8-pixel box between it and the 
+image above.
+Next, locate // TODO 6: Add empty screen subtitle and replace it with the 
+following:
+const SizedBox(height: 16.0), 
+const Text( 
+  'Shopping for ingredients?\n' 
+  'Tap the + button to write them down!', 
+  textAlign: TextAlign.center, 
+),
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 204
+
+--- PAGE 205 ---
+As you just did with the title, you’ve added a subtitle with a 16-pixel box between it 
+and the title above.
+Finally, replace // TODO 7: Add browse recipes button with the following:
+MaterialButton( 
+  textColor: Colors.white, 
+  child: const Text('Browse Recipes'), 
+  shape: RoundedRectangleBorder( 
+      borderRadius: BorderRadius.circular(30.0),), 
+  color: Colors.green, 
+  onPressed: () { 
+    // TODO 8: Go to Recipes Tab 
+},),
+Now, you’ve added a rounded green MaterialButton.
+Note: There are many other styles of buttons you can choose from! See 
+https://ﬂutter.dev/docs/development/ui/widgets/material#Buttons for more 
+options.
+Now, check out your app. It will look like this:
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 205
+
+--- PAGE 206 ---
+Great! Now, users will know that their grocery list is empty. Next, you’ll add a 
+handler so that tapping the Browse Recipes button brings you to the Recipes tab.
+Switching tabs
+You have two options to implement switching to the Recipes tab:
+1. Standard callback: Pass a callback from the parent widget all the way down the 
+widget tree to a descendant widget. When ready, it ﬁres the callback at each level 
+up the tree and calls setState() to rebuild the Home widget’s subtree.
+This approach is OK for small projects, but as your project gets larger, it becomes 
+annoying and complicated. Imagine having to pass a callback at every level of the 
+widget tree. It’s hard to maintain and excessively couples your widgets to one 
+another.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 206
+
+--- PAGE 207 ---
+2. Provider: Wraps around inherited widgets. This package allows you to provide 
+data and state information to descendant widgets.
+This approach is better. It allows descendant widgets in the subtree to access state 
+information.
+Instead of callbacks, you just wrap Consumers around your widgets. Every time a 
+state changes, those Consumers rebuild the subtree below it.
+It’s Provider time!
+Provider overview
+Provider is a convenient way to pass state down the widget tree and rebuild your UI 
+when changes occur. You’ll add it to your project next.
+Before you do that, however, you need to understand four concepts:
+1. ChangeNotifier is extended by a class to provide change notiﬁcations to its 
+listeners.
+2. ChangeNotifierProvider listens for changes to a ChangeNotifier. Widgets 
+below it can access the state object and listen to state changes.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 207
+
+--- PAGE 208 ---
+3. Consumer wraps around part of a widget tree. It rebuilds part of a subtree when 
+the state it listens to changes.
+4. Provider.of allows descendant widgets to access the state object. If you only 
+need access to the state object and don’t need to listen for changes, use this!
+Note: This is a quick overview of how Provider works. You’ll learn more about 
+using Provider for state management in Chapter 13, “State Management”.
+Adding Provider
+Open pubspec.yaml and add the following package under dependencies:
+provider: ^5.0.0
+Save the ﬁle and run flutter pub get.
+Creating T abManager
+In the models directory, create a new ﬁle called tab_manager.dart and add the 
+following code:
+import 'package:flutter/material.dart'; 
+ 
+// 1 
+class TabManager extends ChangeNotifier { 
+  // 2 
+  int selectedTab = 0; 
+ 
+  // 3 
+  void goToTab(index) { 
+    // 4 
+    selectedTab = index; 
+    // 5 
+    notifyListeners(); 
+  } 
+ 
+  // 6 
+  void goToRecipes() { 
+    selectedTab = 1; 
+    // 7 
+    notifyListeners(); 
+  } 
+}
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 208
+
+--- PAGE 209 ---
+TabManager manages the tab index that the user taps. This code does the following:
+1. TabManager extends ChangeNotifier. This allows the object to provide change 
+notiﬁcations to its listeners.
+2. selectedTab keeps track of which tab the user tapped.
+3. goToTab is a simple function that modiﬁes the current tab index.
+4. Stores the index of the new tab the user tapped.
+5. Calls notifyListeners() to notify all widgets listening to this state.
+6. goToRecipes() is a speciﬁc function that sets selectedTab to the Recipes tab, 
+which is at index 1.
+7. Notiﬁes all widgets listening to TabManager that Recipes is the selected tab.
+Next, add TabManager to models.dart:
+export 'tab_manager.dart';
+Awesome! Now, you have a simple tab manager to manage the current tab index. It’s 
+time to provide this to your widgets.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 209
+
+--- PAGE 210 ---
+Managing tab state
+So how will you use Provider? Here’s a blueprint:
+These are the steps you’ll take:
+• Provide the TabManager change notiﬁer at the root level of Fooderlich. This 
+allows descendant widgets to access the tab manager.
+• Wrap a Consumer around Home. This ensures that Home displays the right screen 
+anytime TabManager’s tab index changes.
+• Since Provider is a wrapper around inherited widgets, EmptyGroceryScreen can 
+access the TabManager state object through its context.
+• goToRecipes() changes the tab index, notifying Consumer, which then rebuilds 
+Home with the correct tab to display.
+Sounds easy, right? Well, then, it’s time to jump in.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 210
+
+--- PAGE 211 ---
+Providing T abManager
+First, you need to provide TabManager at Fooderlich’s top level to let descendant 
+widgets access the state object.
+Open main.dart and add the following imports:
+import 'package:provider/provider.dart'; 
+import 'models/models.dart';
+Then, locate // TODO 8: Replace Home with MultiProvider and replace home 
+with the following:
+// 1 
+home: MultiProvider( 
+  providers: [ 
+    // 2 
+    ChangeNotifierProvider(create: (context) => TabManager(),), 
+    // TODO 10: Add GroceryManager Provider 
+  ], 
+  child: const Home(),),
+Here’s how the code works:
+1. You assign MultiProvider as a property of Home. This accepts a list of providers 
+for Home’s descendant widgets to access.
+2. ChangeNotifierProvider creates an instance of TabManager, which listens to 
+tab index changes and notiﬁes its listeners.
+Note: Use MultiProvider when you need to provide more than one Provider 
+to a widget tree. Later, you’ll also add a GroceryManager state object to 
+manage the list of items.
+Adding a T abManager consumer
+Now, it’s time to set up the consumer so the app can listen to changes broadcast by 
+TabManager.
+Open home.dart and add the following imports:
+import 'package:provider/provider.dart'; 
+import 'models/models.dart';
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 211
+
+--- PAGE 212 ---
+Next, locate // TODO 9: Wrap inside a Consumer Widget and replace the whole 
+body of build() with the following:
+// 1 
+return Consumer<TabManager>(builder: (context, tabManager, 
+child) { 
+  return Scaffold( 
+      appBar: AppBar( 
+          title: Text('Fooderlich', 
+              style: Theme.of(context).textTheme.headline6),), 
+      // 2 
+      body: pages[tabManager.selectedTab], 
+      bottomNavigationBar: BottomNavigationBar( 
+          selectedItemColor: Theme.of(context) 
+            .textSelectionTheme.selectionColor, 
+          // 3 
+          currentIndex: tabManager.selectedTab, 
+          onTap: (index) { 
+            // 4 
+            tabManager.goToTab(index); 
+          }, 
+          items: <BottomNavigationBarItem>[ 
+            const BottomNavigationBarItem( 
+                icon: Icon(Icons.explore), label: 'Explore',), 
+            const BottomNavigationBarItem( 
+                icon: Icon(Icons.book), label: 'Recipes',), 
+            const BottomNavigationBarItem( 
+                icon: Icon(Icons.list), label: 'To Buy',), 
+          ],),); 
+},);
+Here’s how the code works:
+1. Wraps all the widgets inside Consumer. When TabManager changes, the widgets 
+below it will rebuild.
+2. Displays the correct page widget, based on the current tab index.
+3. Sets the current index of BottomNavigationBar.
+4. Calls manager.goToTab() when the user taps a different tab, to notify other 
+widgets that the index changed.
+Now, since you’ve added Consumer<TabManager>, you no longer need 
+_onItemTapped().  Locate the method and delete it, as well as the int 
+_selectedIndex = 0; declaration.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 212
+
+--- PAGE 213 ---
+Switching to the Recipes tab
+There’s one last step to implement the ability to switch between tabs.
+Open empty_grocery_screen.dart and add the following imports:
+import 'package:provider/provider.dart'; 
+import '../models/models.dart';
+Then, locate // TODO 8: Go to Recipes Tab and replace it with the following:
+Provider.of<TabManager>(context, listen: false).goToRecipes();
+Here, you use Provider.of() to access the model object, TabManager. 
+goToRecipes() sets the index to the Recipes tab. This notiﬁes Consumer to rebuild 
+Home with the right tab index.
+On the To Buy tab, tap the Browse Recipes button. It will now navigate to the 
+recipes screen.
+Great! Now it’s time to create some grocery items.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 213
+
+--- PAGE 214 ---
+Managing the grocery items
+Before you display or create grocery items, you need a way to manage them.
+In the models directory, create a new ﬁle called grocery_manager.dart. Add the 
+following:
+import 'package:flutter/material.dart'; 
+import 'grocery_item.dart'; 
+ 
+class GroceryManager extends ChangeNotifier { 
+  // 1 
+  final _groceryItems = <GroceryItem>[]; 
+ 
+  // 2 
+  List<GroceryItem> get groceryItems => 
+List.unmodifiable(_groceryItems); 
+ 
+  // 3 
+  void deleteItem(int index) { 
+    _groceryItems.removeAt(index); 
+    notifyListeners(); 
+  } 
+ 
+  // 4 
+  void addItem(GroceryItem item) { 
+    _groceryItems.add(item); 
+    notifyListeners(); 
+  } 
+ 
+  // 5 
+  void updateItem(GroceryItem item, int index) { 
+    _groceryItems[index] = item; 
+    notifyListeners(); 
+  } 
+ 
+  // 6 
+  void completeItem(int index, bool change) { 
+    final item = _groceryItems[index]; 
+    _groceryItems[index] = item.copyWith(isComplete: change); 
+    notifyListeners(); 
+  } 
+}
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 214
+
+--- PAGE 215 ---
+GroceryManager extends ChangeNotifier to notify its listener about state changes. 
+Here’s how GroceryManager works:
+1. This manager holds a private array of _groceryItems. Only the manager can 
+change and update grocery items.
+2. Provides a public getter method for groceryItems, which is unmodiﬁable. 
+External entities can only read the list of grocery items.
+3. deleteItem() deletes an item at a particular index.
+4. addItem() adds a new grocery item at the end of the list.
+5. updateItem() replaces the old item at a given index with a new item.
+6. completeItem() toggles the isComplete ﬂag on and off.
+Each of these methods calls notifyListeners(). This notiﬁes widgets of changes to 
+GroceryManager that require a rebuild.
+Next, open the barrel ﬁle, models.dart, and add the following:
+export 'grocery_manager.dart';
+This lets other classes use the new manager.
+Adding GroceryManager as a provider
+Much like you did with TabManager you‘ll now add GroceryManager as a provider.
+Open main.dart and locate // TODO 10: Add GroceryManager Provider. Replace 
+it with:
+ChangeNotifierProvider(create: (context) => GroceryManager(),),
+All descendant widgets of Fooderlich can now listen to or access GroceryManager!
+Consuming the changes
+How does the To Buy screen react to changes in the grocery list? So far, it doesn’t, 
+but you’re now ready to hook up the new manager with the view that displays 
+grocery items. :]
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 215
+
+--- PAGE 216 ---
+Open grocery_screen.dart and add the following imports:
+import 'package:provider/provider.dart'; 
+import '../models/models.dart';
+Right below build(), add the following code:
+Widget buildGroceryScreen() { 
+  // 1 
+  return Consumer<GroceryManager>( 
+    // 2 
+    builder: (context, manager, child) { 
+    // 3 
+    if (manager.groceryItems.isNotEmpty) { 
+      // TODO 25: Add GroceryListScreen 
+      return Container(); 
+    } else { 
+      // 4 
+      return const EmptyGroceryScreen(); 
+    } 
+  },); 
+}
+buildGroceryScreen() is a helper function that decides which widget tree to 
+construct. Here’s how it works:
+1. You wrap your widgets inside a Consumer, which listens for GroceryManager 
+state changes.
+2. Consumer rebuilds the widgets below itself when the grocery manager items 
+changes.
+3. If there are grocery items in the list, show the GroceryListScreen. You will 
+create this screen soon.
+4. If there are no grocery items, show the EmptyGroceryScreen.
+Tip: You should only wrap a Consumer around widgets that need it. For 
+example, wrapping a consumer widget at the top level would force it to rebuild 
+the entire tree!
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 216
+
+--- PAGE 217 ---
+Next, locate // TODO 4: add a scaffold widget and replace the line below it 
+with the following:
+// 5 
+return Scaffold( 
+  // 6 
+  floatingActionButton: FloatingActionButton( 
+      child: const Icon(Icons.add), 
+      onPressed: () { 
+        // TODO 11: Present GroceryItemScreen 
+      },), 
+  // 7 
+  body: buildGroceryScreen(),);
+Here’s how the code works:
+5. The main layout structure for GroceryScreen is a scaffold.
+6. Adds a ﬂoating action button with a + icon. Tapping the button presents the 
+screen to create or add an item. You’ll build this screen later.
+7. Builds the rest of the Grocery screen’s subtree. That’s coming up next!
+GroceryScreen is all set up to switch between the empty and list screens. Now, it’s 
+time to create grocery items!
+Adding new packages
+Before going any further, you need to add three new packages. Open pubspec.yaml 
+and add the following under dependencies:
+flutter_colorpicker: ^0.4.0 
+intl: ^0.17.0 
+uuid: ^3.0.4
+Here’s what each of them does:
+• ﬂutter_colorpicker: Provides a material color picker for your app.
+• intl: Provides internationalization and localization utilities. You’ll use this to 
+format dates.
+• uuid: Generates unique keys for each grocery item. This helps you know which 
+item to add, update or remove.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 217
+
+--- PAGE 218 ---
+Don’t forget to run flutter pub get after updating pubspec.yaml entries.
+The next screen you’ll create is GroceryItemScreen, which gives users a way to edit 
+or create new grocery items.
+Creating GroceryItemScreen
+In the screens directory, create a new ﬁle called grocery_item_screen.dart and add 
+the following:
+import 'package:flutter/material.dart'; 
+import 'package:google_fonts/google_fonts.dart'; 
+import 'package:flutter_colorpicker/flutter_colorpicker.dart'; 
+import 'package:intl/intl.dart'; 
+import 'package:uuid/uuid.dart'; 
+import '../models/models.dart'; 
+ 
+class GroceryItemScreen extends StatefulWidget { 
+  // 1 
+  final Function(GroceryItem) onCreate; 
+  // 2 
+  final Function(GroceryItem) onUpdate; 
+  // 3 
+  final GroceryItem originalItem; 
+  // 4 
+  final bool isUpdating; 
+ 
+  const GroceryItemScreen( 
+      {Key key, this.onCreate, this.onUpdate, 
+this.originalItem,}) 
+      : isUpdating = (originalItem != null), 
+        super(key: key); 
+ 
+  @override 
+  _GroceryItemScreenState createState() => 
+_GroceryItemScreenState(); 
+} 
+ 
+class _GroceryItemScreenState extends State<GroceryItemScreen> { 
+ 
+  // TODO: Add grocery item screen state properties 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // TODO 12: Add GroceryItemScreen Scaffold 
+    return Container(color: Colors.orange); 
+  } 
+}
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 218
+
+--- PAGE 219 ---
+Take a moment to understand the properties you added:
+1. onCreate is a callback that lets you know when a new item is created.
+2. onUpdate is a callback that returns the updated grocery item.
+3. The grocery item that the user clicked.
+4. isUpdating determines whether the user is creating or editing an item.
+Before you continue building GroceryItemScreen, you need to present this widget.
+Presenting GroceryItemScreen
+Open grocery_screen.dart and add the following import:
+import 'grocery_item_screen.dart';
+Then, locate //TODO 11: Present GroceryItemScreen and replace it with the 
+following code:
+// 1 
+final manager = Provider.of<GroceryManager>( 
+  context, 
+  listen: false); 
+// 2 
+Navigator.push( 
+  context, 
+  // 3 
+  MaterialPageRoute( 
+    // 4 
+    builder: (context) => GroceryItemScreen( 
+      // 5 
+      onCreate: (item) { 
+        // 6 
+        manager.addItem(item); 
+        // 7 
+        Navigator.pop(context); 
+      }, 
+    ),),);
+Here’s how the code works:
+1. Returns the GroceryManager available in the tree.
+2. Navigator.push() adds a new route to the stack of routes.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 219
+
+--- PAGE 220 ---
+3. MaterialPageRoute replaces the entire screen with a platform-speciﬁc 
+transition. In Android, for example, it slides upwards and fades in. In iOS, it slides 
+in from the right.
+4. Creates a new GroceryItemScreen within the route’s builder callback.
+5. onCreate deﬁnes what to do with the created item.
+6. addItem() adds this new item to the list of items.
+7. Once the item is added to the list, pop removes the top navigation route item, 
+GroceryItemScreen, to show the list of grocery items.
+Note: For now, you just need to know that Navigator.push() presents a new 
+screen and Navigator.pop removes it again. You’ll dive deeper into 
+Navigator in the next chapter.
+Tap the + button on your running app and you’ll see the following:
+Onwards!
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 220
+
+--- PAGE 221 ---
+Adding GroceryItemScreen’s state properties
+Now, it’s time to give the grocery items some properties to make them more useful.
+Start by opening grocery_item_screen.dart and locating // TODO: Add grocery 
+item screen state properties. Replace it with the following:
+final _nameController = TextEditingController(); 
+String _name = ''; 
+Importance _importance = Importance.low; 
+DateTime _dueDate = DateTime.now(); 
+TimeOfDay _timeOfDay = TimeOfDay.now(); 
+Color _currentColor = Colors.green; 
+int _currentSliderValue = 0;
+Ignore any tan squiggles — these will go away as you add more code.
+_GroceryItemScreenState manages six different values:
+1. _nameController is a TextEditingController. This controller listens for text 
+changes. It controls the value displayed in a text ﬁeld.
+2. _name stores the name of the item.
+3. _importance stores the importance level.
+4. _dueDate stores the current date and time.
+5. _timeOfDay stores the current time.
+6. _currentColor stores the color label.
+7. _currentSliderValue stores the quantity of an item.
+These properties will create the ﬁnal GroceryItem.
+Initializing GroceryItemScreen’s properties
+Next, within _GroceryItemScreenState, add the following code before build():
+@override 
+void initState() { 
+  // 1 
+  if (widget.originalItem != null) { 
+    _nameController.text = widget.originalItem.name; 
+    _name = widget.originalItem.name; 
+    _currentSliderValue = widget.originalItem.quantity; 
+    _importance = widget.originalItem.importance;
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 221
+
+--- PAGE 222 ---
+    _currentColor = widget.originalItem.color; 
+    final date = widget.originalItem.date; 
+    _timeOfDay = TimeOfDay(hour: date.hour, minute: 
+date.minute); 
+    _dueDate = date; 
+  } 
+ 
+  // 2 
+  _nameController.addListener(() { 
+    setState(() { 
+      _name = _nameController.text; 
+    }); 
+  }); 
+ 
+  super.initState(); 
+}
+Before a widget builds, initState() initializes its properties before use.
+1. When the originalItem is not null, the user is editing an existing item. In this 
+case, you must conﬁgure the widget to show the item’s values.
+2. Adds a listener to listen for text ﬁeld changes. When the text changes, you set the 
+_name.
+This newly added code made those tan squiggles disappear. :]
+Soon, you’ll add some layout widgets to align the items properly on the screen. 
+However, before you do, you have a bit more code to add to clean everything up.
+Finally, add the following method after initState():
+@override 
+void dispose() { 
+  _nameController.dispose(); 
+  super.dispose(); 
+}
+This will dispose your TextEditingController when you no longer need it.
+Now that you’ve completed your conﬁguration and cleaned it up, it’s time to add 
+some layout widgets!
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 222
+
+--- PAGE 223 ---
+Adding GroceryItemScreen’s layout widgets
+Still in grocery_item_screen.dart, locate // TODO 12: Add GroceryItemScreen 
+Scaffold and replace the line below it with the following:
+// 1 
+return Scaffold( 
+  // 2 
+  appBar: AppBar( 
+    actions: [ 
+      IconButton( 
+          icon: const Icon(Icons.check), 
+          onPressed: () { 
+            // TODO 24: Add callback handler 
+          },) 
+    ], 
+    // 3 
+    elevation: 0.0, 
+    // 4 
+    title: Text('Grocery Item', 
+        style: GoogleFonts.lato(fontWeight: 
+FontWeight.w600),),), 
+  // 5 
+  body: Container( 
+    padding: const EdgeInsets.all(16.0), 
+    child: ListView( 
+      children: [ 
+      // TODO 13: Add name TextField 
+      // TODO 14: Add Importance selection 
+      // TODO 15: Add date picker 
+      // TODO 16: Add time picker 
+      // TODO 17: Add color picker 
+      // TODO 18: Add slider 
+      // TODO: 19: Add Grocery Tile 
+    ],),), 
+  );
+Here’s how the code works:
+1. Scaffold deﬁnes the main layout and structure of the entire screen.
+2. Includes an app bar with one action button. The user will tap this button when 
+they’ve ﬁnished creating an item.
+3. Sets elevation to 0.0, removing the shadow under the app bar.
+4. Sets the title of the app bar.
+5. Shows a ListView, padded by 16 pixels on every side, within the body of the 
+scaffold. You’ll ﬁll this list view with a bunch of interactive widgets soon.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 223
+
+--- PAGE 224 ---
+Your screen now looks like this:
+It’s a bit bare, but not for long. Now that you have the main layout structure, it’s time 
+to add interactive widgets!
+Adding the text ﬁeld to enter a grocery name
+The ﬁrst input widget you’ll create is a TextField, which is a helpful widget when 
+you need the user to enter some text. In this case, it will capture the name of the 
+grocery item.
+There are two ways to listen for text changes. You can either:
+1. Implement an onChanged callback handler.
+2. Supply TextEditingController to TextField and add a listener for text 
+changes. This approach allows more ﬁne-grained control over your text ﬁeld, 
+such as changing the text ﬁeld’s value based on a certain logic.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 224
+
+--- PAGE 225 ---
+You’ll use the second approach. TextEditingController allows you to set the 
+initial value.
+Note: You can ﬁnd more information about text ﬁelds here: https://ﬂutter.dev/
+docs/cookbook/forms/text-ﬁeld-changes
+Still in grocery_item_screen.dart, add the following code below build():
+Widget buildNameField() { 
+  // 1 
+  return Column( 
+    // 2 
+    crossAxisAlignment: CrossAxisAlignment.start, 
+    children: [ 
+      // 3 
+      Text('Item Name', style: GoogleFonts.lato(fontSize: 
+28.0),), 
+      // 4 
+      TextField( 
+        // 5 
+        controller: _nameController, 
+        // 6 
+        cursorColor: _currentColor, 
+        // 7 
+        decoration: InputDecoration( 
+          // 8 
+          hintText: 'E.g. Apples, Banana, 1 Bag of salt', 
+          // 9 
+          enabledBorder: const UnderlineInputBorder( 
+              borderSide: BorderSide(color: Colors.white),), 
+          focusedBorder: UnderlineInputBorder( 
+              borderSide: BorderSide(color: _currentColor),), 
+          border: UnderlineInputBorder( 
+              borderSide: BorderSide(color: _currentColor),), 
+        ),), 
+  ],); 
+}
+Here’s what’s happening above:
+1. Creates a Column to lay elements out vertically.
+2. Aligns all widgets in the column to the left.
+3. Adds a Text that’s styled using GoogleFonts.
+4. Adds a TextField.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 225
+
+--- PAGE 226 ---
+5. Sets the TextField’s TextEditingController.
+6. Sets the cursor color.
+7. Styles the text ﬁeld using InputDecoration.
+8. Includes a hint to give users an example of what to write.
+9. Customizes the text ﬁeld’s border color.
+Next, locate // TODO 13: Add name TextField and replace it with:
+buildNameField(),
+Run the app and it will look like this:
+On to the next input widget!
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 226
+
+--- PAGE 227 ---
+Building the importance widget
+Your next step is to let the users choose how important a grocery item is. You’ll do 
+this using a Chip. This widget represents information about an entity. You can 
+present a collection of chips for the user to select.
+Understanding chips
+There are four different types of chip widgets:
+Image from: https://material.io/components/chips/ﬂutter#types
+1. InputChip: Converts input into chips. An example would be user preference UI 
+ﬂows, such as asking the types of new media they like.
+2. ChoiceChip: Allows the user to make a single selection given a set of options.
+3. FilterChip: Allows the user to select multiple answers given a set of options.
+4. ActionChip: A button that’s styled like a chip.
+Note: For more information about chips, check out: https://material.io/
+components/chips/ﬂutter#types
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 227
+
+--- PAGE 228 ---
+Here, you’ll use a ChoiceChip to let users choose the importance level of a grocery 
+item.
+Continuing in grocery_item_screen.dart, add the following code below 
+buildNameField():
+Widget buildImportanceField() { 
+  // 1 
+  return Column( 
+    crossAxisAlignment: CrossAxisAlignment.start, 
+    children: [ 
+      // 2 
+      Text('Importance', style: GoogleFonts.lato(fontSize: 
+28.0),), 
+      // 3 
+      Wrap( 
+        spacing: 10.0, 
+        children: [ 
+          // 4 
+          ChoiceChip( 
+            // 5 
+            selectedColor: Colors.black, 
+            // 6 
+            selected: _importance == Importance.low, 
+            label: const Text( 
+              'low', 
+              style: TextStyle(color: Colors.white),), 
+            // 7 
+            onSelected: (selected) { 
+              setState(() => _importance = Importance.low); 
+            },), 
+          ChoiceChip( 
+            selectedColor: Colors.black, 
+            selected: _importance == Importance.medium, 
+            label: const Text( 
+              'medium', 
+              style: TextStyle(color: Colors.white),), 
+            onSelected: (selected) { 
+              setState(() => _importance = Importance.medium); 
+            },), 
+          ChoiceChip( 
+            selectedColor: Colors.black, 
+            selected: _importance == Importance.high, 
+            label: const Text( 
+              'high', 
+              style: TextStyle(color: Colors.white),),
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 228
+
+--- PAGE 229 ---
+            onSelected: (selected) { 
+              setState(() => _importance = Importance.high); 
+            },), 
+        ],) 
+    ],); 
+}
+In the code above, you:
+1. Use a Column to lay out the widgets vertically.
+2. Add Text.
+3. Add Wrap and space each child widget 10 pixels apart. Wrap lays out children 
+horizontally. When there’s no more room, it wraps to the next line.
+4. Create a ChoiceChip for the user to select the low priority.
+5. Set the selected chip’s background color to black.
+6. Check whether the user selected this ChoiceChip.
+7. Update _importance, if the user selected this choice.
+You then repeat steps four through seven two more times for the medium and high 
+priority ChoiceChips.
+Note: For more information, check out this animated video of how Wrap 
+works! https://youtu.be/z5iw2SeFx2M
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 229
+
+--- PAGE 230 ---
+Next, locate // TODO 14: Add Importance selection and replace it with:
+buildImportanceField(),
+Run the app. It will currently look like this:
+Now, it’s time to add the date by which the user needs to get this item!
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 230
+
+--- PAGE 231 ---
+Building the date widget
+DatePicker is a useful widget when you need the user to enter a date. You’ll use it 
+here to let the user set a deadline to buy their grocery item.
+To use it, add the following code below buildImportanceField():
+Widget buildDateField(BuildContext context) { 
+  // 1 
+  return Column( 
+    crossAxisAlignment: CrossAxisAlignment.start, 
+    children: [ 
+      // 2 
+      Row( 
+        // 3 
+        mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+        children: [ 
+          // 4 
+          Text('Date', style: GoogleFonts.lato(fontSize: 
+28.0),), 
+          // 5 
+          TextButton( 
+            child: const Text('Select'), 
+            // 6 
+            onPressed: () async { 
+              final currentDate = DateTime.now(); 
+              // 7 
+              final selectedDate = await showDatePicker( 
+                context: context, 
+                initialDate: currentDate, 
+                firstDate: currentDate, 
+                lastDate: DateTime(currentDate.year + 5), 
+              );
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 231
+
+--- PAGE 232 ---
+              // 8 
+              setState(() { 
+                if (selectedDate != null) { 
+                  _dueDate = selectedDate; 
+                } 
+              }); 
+          },), 
+        ],), 
+      // 9 
+      if (_dueDate != null) 
+        Text('${DateFormat('yyyy-MM-dd').format(_dueDate)}'), 
+  ],); 
+}
+Here’s how the code works:
+1. Adds a Column to lay out elements vertically.
+2. Adds a Row to lay out elements horizontally.
+3. Adds a space between elements in the row.
+4. Adds the date Text.
+5. Adds a TextButton.
+6. Gets the current date when the user presses the button.
+7. Presents the date picker. You restrict the date picker and only allow the user to 
+pick a date from today until ﬁve years in the future.
+8. Sets _dueDate after the user selects a date.
+9. If _dueDate is not null, formats the current date and displays it with a Text.
+Next, locate // TODO 15: Add date picker and replace it with:
+buildDateField(context),
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 232
+
+--- PAGE 233 ---
+Run the app. It will now look like this:
+Up next — the time picker!
+Building the time widget
+Now that the user can set the date when they want to buy an item, you’ll also let 
+them set the time. To do this, you’ll use TimePicker — a widget that’s useful when 
+you need the user to enter the time.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 233
+
+--- PAGE 234 ---
+To do this, add the following code below buildDateField():
+Widget buildTimeField(BuildContext context) { 
+  return Column( 
+    crossAxisAlignment: CrossAxisAlignment.start, 
+    children: [ 
+      Row( 
+        mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+        children: [ 
+        Text('Time of Day', style: GoogleFonts.lato(fontSize: 
+28.0),), 
+        TextButton( 
+          child: const Text('Select'), 
+          onPressed: () async { 
+            // 1 
+            final timeOfDay = await showTimePicker( 
+              // 2 
+              initialTime: TimeOfDay.now(), 
+              context: context, 
+            ); 
+ 
+            // 3 
+            setState(() { 
+              if (timeOfDay != null) { 
+                _timeOfDay = timeOfDay; 
+              } 
+            }); 
+          },), 
+      ]), 
+    if (_timeOfDay != null) 
+      Text('${_timeOfDay.format(context)}'), 
+  ],); 
+}
+This has the same setup as buildDateField(). Here’s how the code for the time 
+picker works:
+1. Shows the time picker when the user taps the Select button.
+2. Sets the initial time displayed in the time picker to the current time.
+3. Once the user selects the time widget, returns a TimeOfDay object, then updates 
+_timeOfDay.
+Next, locate // TODO 16: Add time picker and replace it with:
+buildTimeField(context),
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 234
+
+--- PAGE 235 ---
+Run the app to see the following:
+Building the color picker widget
+Now, you’re ready to let the user pick a color to tag the grocery items. For this, you’ll 
+use a third-party widget, ColorPicker, which presents the user with a color palette.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 235
+
+--- PAGE 236 ---
+First, add the following code below buildTimeField():
+Widget buildColorPicker(BuildContext context) { 
+  // 1 
+  return Row( 
+    mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+    children: [ 
+      // 2 
+      Row( 
+        children: [ 
+          Container(height: 50.0, width: 10.0, color: 
+_currentColor,), 
+          const SizedBox(width: 8.0), 
+          Text('Color', style: GoogleFonts.lato(fontSize: 
+28.0),), 
+        ], 
+      ), 
+      // 3 
+      TextButton( 
+          child: const Text('Select'), 
+          onPressed: () { 
+            // 4 
+            showDialog( 
+              context: context, 
+              builder: (context) { 
+                // 5 
+                return AlertDialog( 
+                  content: BlockPicker( 
+                      pickerColor: Colors.white, 
+                      // 6 
+                      onColorChanged: (color) { 
+                        setState(() => _currentColor = color); 
+                      },), 
+                  actions: [ 
+                    // 7 
+                    TextButton( 
+                      child: const Text('Save'), 
+                      onPressed: () { 
+                        Navigator.of(context).pop(); 
+                      }, 
+                    ), 
+                  ], 
+                ); 
+            },); 
+          }) 
+  ],); 
+}
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 236
+
+--- PAGE 237 ---
+Here’s how it works:
+1. Adds a Row widget to layout the color picker section in the horizontal direction.
+2. Creates a child Row and groups the following widgets:
+• A Container to display the selected color.
+• An 8-pixel-wide SizedBox.
+• A Text to display the color picker’s title.
+3. Adds a TextButton.
+4. Shows a pop-up dialog when the user taps the button.
+5. Wraps BlockPicker inside AlertDialog.
+6. Updates _currentColor when the user selects a color.
+7. Adds an action button in the dialog. When the user taps Save, it dismisses the 
+dialog.
+Note: For more information about AlertDialog, check out: https://
+api.ﬂutter.dev/ﬂutter/material/AlertDialog-class.html.
+Next, add the color picker to the app. Locate // TODO 17: Add color picker and 
+replace it with:
+const SizedBox(height: 10.0), 
+buildColorPicker(context),
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 237
+
+--- PAGE 238 ---
+After running the app, it will look like this:
+Great! Now the user can tag their grocery list items with colors to make them easier 
+to identify.
+Building a quantity widget
+For your next step, you’ll let the user indicate how much of any given item they need. 
+For this, you’ll use a widget that’s useful for capturing a quantity or amount: Slider.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 238
+
+--- PAGE 239 ---
+Add the following code below buildColorPicker():
+Widget buildQuantityField() { 
+  // 1 
+  return Column( 
+    crossAxisAlignment: CrossAxisAlignment.start, 
+    children: [ 
+      // 2 
+      Row( 
+          crossAxisAlignment: CrossAxisAlignment.baseline, 
+          textBaseline: TextBaseline.alphabetic, 
+          children: [ 
+            Text( 
+              'Quantity', 
+              style: GoogleFonts.lato(fontSize: 28.0),), 
+            const SizedBox(width: 16.0), 
+            Text( 
+              _currentSliderValue.toInt().toString(), 
+              style: GoogleFonts.lato(fontSize: 18.0),), 
+          ], 
+        ), 
+      // 3 
+      Slider( 
+        // 4 
+        inactiveColor: _currentColor.withOpacity(0.5), 
+        activeColor: _currentColor, 
+        // 5 
+        value: _currentSliderValue.toDouble(), 
+        // 6 
+        min: 0.0, 
+        max: 100.0, 
+        // 7 
+        divisions: 100, 
+        // 8 
+        label: _currentSliderValue.toInt().toString(), 
+        // 9 
+        onChanged: (double value) { 
+          setState(() { 
+            _currentSliderValue = value.toInt(); 
+          },); 
+        }, 
+      ), 
+    ],); 
+}
+In the code above, you:
+1. Lay out your widgets vertically, using a Column.
+2. Add a title and the quantity labels to the quantity section by creating a Row that 
+contains two Texts. You use a SizedBox to separate the Texts.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 239
+
+--- PAGE 240 ---
+3. Add a Slider.
+4. Set the active and inactive colors.
+5. Set the current slider value.
+6. Set the slider’s minimum and maximum value.
+7. Set how you want the slider to increment.
+8. Set the label above the slider. Here, you want to show the current value above the 
+slider.
+9. Update _currentSliderValue when the value changes.
+Now, you’re ready to use the slider. Locate // TODO 18: Add slider and replace it 
+with:
+const SizedBox(height: 10.0), 
+buildQuantityField(),
+Run the app to see:
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 240
+
+--- PAGE 241 ---
+Now, all the input widgets are complete. Awesome! But keep  
+grocery_item_screen.dart open, you’ll make some more updates soon.
+Wouldn’t it be great if you could preview what the grocery item looks like while you 
+are creating it? That’s your next task.
+Creating GroceryTile
+Start by creating GroceryTile. Here’s what it looks like:
+In lib/components, create a new ﬁle called grocery_tile.dart. Then add the 
+following code:
+import 'package:flutter/material.dart'; 
+import 'package:google_fonts/google_fonts.dart'; 
+import 'package:intl/intl.dart'; 
+import '../models/grocery_item.dart'; 
+ 
+class GroceryTile extends StatelessWidget { 
+  // 1 
+  final GroceryItem item; 
+  // 2 
+  final Function(bool) onComplete; 
+  // 3 
+  final TextDecoration textDecoration; 
+ 
+  // 4 
+  GroceryTile({ 
+    Key key, 
+    this.item, 
+    this.onComplete}) : 
+    textDecoration = 
+    item.isComplete ? TextDecoration.lineThrough : 
+TextDecoration.none, 
+    super(key: key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // TODO 21: Change this Widget 
+    return Container(
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 241
+
+--- PAGE 242 ---
+      height: 100.0, 
+      // TODO 20: Replace this color 
+      color: Colors.red, 
+    ); 
+  } 
+}
+Here’s how GroceryTile is set up:
+1. You include a GroceryItem to conﬁgure the tile.
+2. onComplete is a callback handler that lets you know whether the user toggled the 
+checkbox on or off.
+3. textDecoration helps style all the Texts.
+4. When you initialize a GroceryTile, you check the item to see if the user marked 
+it as complete. If so, you show a strike through the text. Otherwise, you display 
+the text as normal.
+Now that you’ve completed GroceryTile’s initial setup, it’s time to add more 
+functionality to the screen. Since you’ll work on it again soon, keep 
+grocery_tile.dart open.
+Using GroceryTile
+Switch back to grocery_item_screen.dart and add the following import:
+import '../components/grocery_tile.dart';
+Then locate // TODO: 19: Add Grocery Tile and replace it with the following:
+const SizedBox(height: 16), 
+GroceryTile( 
+  item: GroceryItem( 
+    name: _name, 
+    importance: _importance, 
+    color: _currentColor, 
+    quantity: _currentSliderValue, 
+    date: DateTime(_dueDate.year, _dueDate.month, _dueDate.day, 
+        _timeOfDay.hour, _timeOfDay.minute,),),),
+This code uses all the state properties of the widget to create a GroceryItem, then 
+passes it to GroceryTile to conﬁgure itself.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 242
+
+--- PAGE 243 ---
+Your app should look similar to this:
+Now, it’s time to turn that red box into a grocery item!
+Building GroceryTile
+Now that you’ve set up the live update, it’s time to add more details to your grocery 
+tile. Switch back to grocery_tile.dart.
+Displaying the importance label
+So far, you’ve let the user pick an importance for each grocery item, but you’re not 
+displaying that information. To ﬁx this, add the following code below build():
+Widget buildImportance() { 
+  if (item.importance == Importance.low) { 
+    return Text( 
+      'Low',
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 243
+
+--- PAGE 244 ---
+      style: GoogleFonts.lato(decoration: textDecoration)); 
+  } else if (item.importance == Importance.medium) { 
+    return Text( 
+      'Medium', 
+      style: GoogleFonts.lato( 
+        fontWeight: FontWeight.w800, 
+        decoration: textDecoration)); 
+  } else if (item.importance == Importance.high) { 
+    return Text( 
+      'High', 
+      style: GoogleFonts.lato( 
+        color: Colors.red, 
+        fontWeight: FontWeight.w900, 
+        decoration: textDecoration,),); 
+  } else { 
+    throw Exception('This importance type does not exist'); 
+  } 
+}
+Here, you’ve created a helper method to construct the importance label. You check 
+the item’s importance and display the correct Text.
+Displaying the selected date
+Now, you need to ﬁx the same problem with the date to buy the groceries. To do this, 
+add the following code below buildImportance():
+Widget buildDate() { 
+  final dateFormatter = DateFormat('MMMM dd h:mm a'); 
+  final dateString = dateFormatter.format(item.date); 
+  return Text( 
+    dateString, 
+    style: TextStyle( 
+      decoration: textDecoration),); 
+}
+Here, you created a helper method to format and convert DateTime into a 
+dateString format.
+Displaying the checkbox
+Similarly, you’ve added the functionality to let the user mark an item as complete, 
+but haven’t shown the checkbox anywhere. Fix this by adding the following code 
+below buildDate():
+Widget buildCheckbox() { 
+  return Checkbox(
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 244
+
+--- PAGE 245 ---
+    // 1 
+    value: item.isComplete, 
+    // 2 
+    onChanged: onComplete,); 
+}
+Here, you create Checkbox, which:
+1. Toggles the checkbox on or off based on item.isComplete.
+2. Triggers the onComplete callback when the user taps the checkbox.
+Now that you’ve set up all your helper widgets, it’s time to put all the pieces 
+together!
+Finishing GroceryTile
+At this point, you’re ready to put all the elements in place to ﬁnish building the 
+GroceryTile widget.
+Locate // TODO 20: Replace this color and replace the TODO message and the 
+color: Colors.red, line with:
+child: Row( 
+  mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+  children: [ 
+    // TODO 22: Add Row to group (name, date, importance) 
+    // TODO 23: Add Row to group (quantity, checkbox) 
+  ],),
+Here, you’re preparing the Row to host all the elements of the item.
+Now, locate // TODO 21: Change this Widget and notice that Container has a 
+squiggle under it. In the Dart Analysis tab, there’s also an information warning 
+message: SizedBox for whitespace. That’s due to the lint rules. Container() 
+requires more processing than SizedBox().
+Since you only need to deﬁne the height of the box, you don’t need a container; you 
+only need something to give you some space. To ﬁx this, change the word Container 
+to SizedBox. You’ll notice the squiggle and the related message in the Dart Analysis 
+tab are now gone. :]
+Since it no longer applies, delete // TODO 21: Change this Widget as well.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 245
+
+--- PAGE 246 ---
+Next, you’ll group elements into two separate rows to create the following effect:
+• Row 1: Groups the color label and a column containing the name, date and 
+importance.
+• Row 2: Groups the quantity and the checkbox.
+Adding the ﬁrst row
+Locate // TODO 22: Add Row to group (name, date, importance) and replace 
+it with the following:
+// 1 
+Row( 
+  children: [ 
+    // 2 
+    Container(width: 5.0, color: item.color), 
+    // 3 
+    const SizedBox(width: 16.0), 
+    // 4 
+    Column( 
+        mainAxisAlignment: MainAxisAlignment.center, 
+        crossAxisAlignment: CrossAxisAlignment.start, 
+        children: [ 
+          // 5 
+          Text(item.name, 
+              style: GoogleFonts.lato( 
+                  decoration: textDecoration, 
+                  fontSize: 21.0, 
+                  fontWeight: FontWeight.bold),), 
+          const SizedBox(height: 4.0), 
+          buildDate(), 
+          const SizedBox(height: 4.0), 
+          buildImportance(),
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 246
+
+--- PAGE 247 ---
+        ],), 
+  ], 
+),
+In this code, you:
+1. Add a Row to lay out elements in the horizontal direction.
+2. Add a container widget with the item’s color. This helps to color-code items.
+3. Space the elements 16 pixels apart.
+4. Add a Column to lay out elements in the vertical direction.
+5. Lay out elements spaced 4 pixels apart in the following order: item name, date 
+and importance.
+Note: If you’re not seeing your app update when you add these new features, 
+you might need to hot restart, navigate to the To Buy screen and add a new 
+grocery item.
+As you make changes to the screen options and add more code, you’ll see those 
+updates in a newly added tile. Here’s an example:
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 247
+
+--- PAGE 248 ---
+Showing the checkbox
+Next, locate // TODO 23: Add Row to group (quantity, checkbox) and replace 
+it with the following:
+// 6 
+Row( 
+  children: [ 
+    // 7 
+    Text(item.quantity.toString(), 
+        style: 
+            GoogleFonts.lato( 
+              decoration: textDecoration, 
+              fontSize: 21.0),), 
+    // 8 
+    buildCheckbox(), 
+],),
+Here’s how the code works:
+6. Add a Row to lay out elements in the horizontal direction.
+7. Then add a Text to display the item’s quantity.
+8. Finally, add the checkbox.
+Your app should look similar to this:
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 248
+
+--- PAGE 249 ---
+Change some of your choices, such as the name or quantity, and see the tile update 
+automatically. A user can now preview grocery items while they create them!
+Saving the user’s work
+For the ﬁnishing touch, the user needs to be able to save the item.
+Switch back to grocery_item_screen.dart, locate // TODO 24: Add callback 
+handler and replace it with the following:
+// 1 
+final groceryItem = GroceryItem( 
+    id: widget.originalItem?.id ?? const Uuid().v1(), 
+    name: _nameController.text, 
+    importance: _importance, 
+    color: _currentColor, 
+    quantity: _currentSliderValue, 
+    date: DateTime(_dueDate.year, _dueDate.month, 
+        _dueDate.day, _timeOfDay.hour, _timeOfDay.minute,),); 
+ 
+if (widget.isUpdating) { 
+  // 2 
+  widget.onUpdate(groceryItem); 
+} else { 
+  // 3 
+  widget.onCreate(groceryItem); 
+}
+Here’s what’s going on above:
+1. When the user taps Save, you take all the state properties and create a 
+GroceryItem.
+2. If the user is updating an existing item, call onUpdate.
+3. If the user is creating a new item, call onCreate.
+This is pretty much all you need to create an item! Finally, it’s time to display the list 
+of items.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 249
+
+--- PAGE 250 ---
+Creating GroceryListScreen
+In screens, create a new ﬁle called grocery_list_screen.dart.
+Add the following code:
+import 'package:flutter/material.dart'; 
+import '../components/grocery_tile.dart'; 
+import '../models/models.dart'; 
+import 'grocery_item_screen.dart'; 
+ 
+class GroceryListScreen extends StatelessWidget { 
+  final GroceryManager manager; 
+ 
+  const GroceryListScreen({Key key, this.manager}) : super(key: 
+key); 
+ 
+  @override 
+  Widget build(BuildContext context) { 
+    // TODO 26: Replace with ListView 
+    return Container(); 
+  } 
+}
+This is the initial setup for GroceryListScreen. It requires a GroceryManager so it 
+can get the list of grocery items to display in the list.
+Adding items to the Grocery screen
+Open grocery_screen.dart and add the following imports:
+import 'grocery_list_screen.dart';
+Then locate // TODO 25: Add GroceryListScreen and replace the line below it 
+with:
+return GroceryListScreen(manager: manager);
+The grocery list will display if the user has items in the list. Now, it’s time to create 
+that list!
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 250
+
+--- PAGE 251 ---
+Creating a GroceryList view
+Open grocery_list_screen.dart, then locate // TODO 26: Replace with ListView 
+and replace the line below it with the following:
+// 1 
+final groceryItems = manager.groceryItems; 
+// 2 
+return Padding( 
+  padding: const EdgeInsets.all(16.0), 
+  // 3 
+  child: ListView.separated( 
+      // 4 
+      itemCount: groceryItems.length, 
+      itemBuilder: (context, index) { 
+        final item = groceryItems[index]; 
+        // TODO 28: Wrap in a Dismissable 
+        // TODO 27: Wrap in an InkWell 
+        // 5 
+        return GroceryTile( 
+          key: Key(item.id), 
+          item: item, 
+          // 6 
+          onComplete: (change) { 
+            // 7 
+            manager.completeItem(index, change); 
+        },); 
+      }, 
+      // 8 
+      separatorBuilder: (context, index) { 
+        return const SizedBox(height: 16.0); 
+      },), 
+);
+In the code above, you:
+1. Get the list of grocery items from the manager.
+2. Apply padding of 16 pixels all around this screen.
+3. Add ListView.
+4. Set the number of items in the list.
+5. For each item in the list, get the current item and construct a GroceryTile.
+6. Return onComplete when the user taps the checkbox.
+7. Update the item’s isComplete status.
+8. Space each grocery item 16 pixels apart.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 251
+
+--- PAGE 252 ---
+Hot restart, add an item in the tile and tap the check mark in the top-right corner. 
+That will bring you to this screen:
+Great, now you can view the list of grocery items and mark an item complete! But 
+how do you tap an existing item to update it? Guess what, that’s your next step. :]
+Adding gestures
+Before you add gestures, here is a quick overview!
+Gesture-based widgets detect different user touch behaviors. You wrap gesture 
+widgets around other widgets that need touch behavior.
+Gesture widgets try to recognize what type of gesture the user performed — for 
+example, if they tapped, double-tapped, long-pressed or panned.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 252
+
+--- PAGE 253 ---
+The two most common gesture widgets are:
+1. GestureDetector: Provides other controls, like dragging.
+2. InkWell: Provides animated ripple feedback. For example, when the user taps a 
+UI element you use it to display a splash animation, as shown below:
+Gestures behavior
+Another thing to be aware of with gesture widgets is HitTestBehavior, which 
+controls how the gesture behaves during a hit test.
+There are three types of behavior:
+• deferToChild: Passes the touch event down the widget tree. This is the default 
+behavior for GestureDetector.
+• opaque: Prevents widgets in the background from receiving touch events.
+• translucent: Allows widgets in the background to receive touch events.
+These gesture widgets support tap, double-tap, long-press, panning and many other 
+gestures. For more information, check out: https://ﬂutter.dev/docs/development/ui/
+advanced/gestures.
+Now, it’s time to add a gesture!
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 253
+
+--- PAGE 254 ---
+Adding an InkWell
+Open grocery_list_screen.dart, locate // TODO 27: Wrap in an InkWell and 
+replace the existing return GroceryTile() code with the following:
+// 1 
+return InkWell( 
+  child: GroceryTile( 
+    key: Key(item.id), 
+    item: item, 
+    onComplete: (change) { 
+      manager.completeItem(index, change); 
+  }), 
+  // 2 
+  onTap: () { 
+    Navigator.push( 
+        context, 
+        MaterialPageRoute( 
+            builder: (context) => GroceryItemScreen( 
+              originalItem: item, 
+              // 3 
+              onUpdate: (item) { 
+                // 4 
+                manager.updateItem(item, index); 
+                // 5 
+                Navigator.pop(context); 
+              }, 
+            ),),); 
+  }, 
+);
+Here’s how the code works:
+1. You wrap GroceryTile inside an InkWell.
+2. When the gesture recognizes a tap, it presents GroceryItemScreen, letting the 
+user edit the current item.
+3. GroceryItemScreen calls onUpdate when the user updates an item.
+4. GroceryManager updates the item at the particular index.
+5. Dismisses GroceryItemScreen.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 254
+
+--- PAGE 255 ---
+With the app running, you can now tap a grocery item and make an update.
+Great job! You can create and update an item. But what about deleting items you no 
+longer need?
+Dismissing items with a swipe
+Next, you’ll learn how to dismiss or delete items from the list. You’ll use 
+Dismissible, a widget that clears items from the list when the user swipes left or 
+right. It even supports swiping in the vertical direction.
+Within grocery_list_screen.dart, locate // TODO 28: Wrap in a Dismissable. 
+Wrapping a widget with another widget sounds complicated, but it’s not. You could 
+do it manually, but why not use a built-in feature of the IDE? Especially since the 
+feature also includes the closing ); so you don’t have to add it manually.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 255
+
+--- PAGE 256 ---
+Put your cursor on the widget you wish to wrap — in this case, Inkwell — and a light 
+bulb will appear.
+When you click the light bulb, a list appears. The image below was made with 
+Android Studio, but VSCode also has a list, though it may be in a different order.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 256
+
+--- PAGE 257 ---
+Clicking Wrap with widget… wraps a new widget around your existing widget, 
+including adding the closing );.
+In normal circumstances, you’d type the widget you want. In this case, just highlight 
+the widget( child:
+and replace the highlighted code with this:
+Dismissible( 
+  // 6 
+  key: Key(item.id), 
+  // 7 
+  direction: DismissDirection.endToStart, 
+  // 8 
+  background: Container( 
+    color: Colors.red, 
+    alignment: Alignment.centerRight, 
+    child: const Icon(Icons.delete_forever, 
+      color: Colors.white, size: 50.0)), 
+  // 9 
+  onDismissed: (direction) { 
+    // 10
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 257
+
+--- PAGE 258 ---
+    manager.deleteItem(index); 
+    // 11 
+    ScaffoldMessenger.of(context).showSnackBar( 
+      SnackBar(content: Text('${item.name} dismissed'))); 
+  }, 
+  child:
+You’ve now wrapped InkWell inside a Dismissible. Here’s how it works:
+6. The dismissible widget includes a Key. Flutter needs this to ﬁnd and remove the 
+right element in the tree.
+7. Sets the direction the user can swipe to dismiss.
+8. Selects the background widget to display behind the widget you’re swiping. In 
+this case, the background widget is red with a white trash can Icon aligned in the 
+center and to the right of the Container.
+9. onDismissed lets you know when the user swiped away a GroceryTile.
+10. Lets the grocery manager handle deleting the item, given an index.
+11. Shows a snack bar widget to let the user know which item they deleted.
+All done! Try dismissing an item by swiping from right to left. Awesome, right? :]
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 258
+
+--- PAGE 259 ---
+Caching your page selection
+You’re almost done, but there’s one ﬁnal thing to tweak! Did you notice any problems 
+when you switched tabs?
+There are two issues to ﬁx:
+• A spinner shows up every time you switch tabs. This indicates that data reloads 
+every time.
+• The app doesn’t preserve the scroll position when you switch to another tab.
+It’s time to ﬁx these problems!
+Open home.dart and, within build(), replace the body parameter with the 
+following:
+body: IndexedStack(index: tabManager.selectedTab, children: 
+pages),
+IndexedStack allows you to easily switch widgets in your app. It only shows one 
+child widget at a time, but it preserves the state of all the children. Yes, there is a 
+widget for that!
+Now, scroll and switch to different tabs. You’ll notice that the app now preserves all 
+the states across all the children. Nice work!
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 259
+
+--- PAGE 260 ---
+Key points
+• You can pass data around with callbacks or provider packages.
+• If you need to pass data one level up, use callbacks.
+• If you need to pass data deep in the widget tree, use providers.
+• Provider is a state management helper that acts as a wrapper around inherited 
+widgets.
+• Provider helps expose state model objects to widgets below it.
+• Consumer listens for changes to values and rebuilds the widgets below itself.
+• Split your widgets by screen to keep code modular and organized.
+• Create manager objects to manage functions and state changes in one place.
+• Gesture widgets recognize and determine the type of touch event. They provide 
+callbacks to react to events like onTap or onDrag.
+• You can use dismissible widgets to swipe away items in a list.
+Where to go from here?
+There are many ways to engage and collect data from your users. You’ve learned to 
+pass data around using callbacks and providers. You learned to create different input 
+widgets. You also learned to apply touch events to navigate to parts of your app.
+That’s a lot, but you’ve only scratched the surface! There’s a plethora of widgets out 
+there. You can explore other packages at https://pub.dev/, a place where you can ﬁnd 
+the most popular widgets created by the Flutter community!
+In the next section, you’ll dive into navigation.
+Flutter Apprentice Chapter 6: Interactive Widgets
+raywenderlich.com 260
+
+--- PAGE 261 ---
+Section III: Navigating 
+Between Screens
+You’ll continue working on the Fooderlich app in this section, learning about 
+navigating between screens and working with deep links.
+Topics you’ll learn include Navigator 2.0 and Flutter Web.
+raywenderlich.com 261
+
