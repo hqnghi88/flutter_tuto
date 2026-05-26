@@ -1,0 +1,1200 @@
+--- PAGE 262 ---
+7
+Chapter 7: Routes & 
+Navigation
+By Vincent Ngo
+Navigation, or how users switch between different screens, is an important concept 
+to master. Good navigation keeps your app organized and helps users ﬁnd their way 
+around your app without getting frustrated.
+In the previous chapter, you got a small taste of navigation when you created a 
+grocery list for users to manage what to buy. When the user taps an item, it shows 
+the item details:
+raywenderlich.com 262
+
+--- PAGE 263 ---
+But this uses the imperative style of navigation, known as Navigator 1.0. In this 
+chapter, you’ll learn to navigate between screens the declarative way.
+You’ll cover the following topics:
+• Quick overview of Navigator 1.0.
+• Overview of Navigator 2.0 and how to use it.
+• How to drive navigation through state by using the provider package.
+• How to handle the Android system’s back button.
+By the end of this chapter, you will know everything you need to navigate to different 
+screens!
+Note: If you’d like to skip straight to the code, jump ahead to the Getting 
+Started section. If you’d like to learn the theory ﬁrst, read on!
+Introducing Navigator
+If you come from an iOS background, you might be familiar with 
+UINavigationController. This controller deﬁnes a stack-based scheme to manage 
+and navigate between view controllers.
+In Android, you use Jetpack Navigation to manage various fragments.
+In Flutter, you use a Navigator widget to manage your screens or pages. You can 
+think of screens or pages as routes.
+Note: This chapter uses these terms interchangeably because they all mean 
+the same thing.
+A stack is a data structure that manages pages. You insert the elements last-in, ﬁrst-
+out (LIFO), and only the element at the top of the stack is visible to the user.
+For example, when a user views a list of grocery items, tapping an item pushes 
+GroceryItemScreen to the top of the stack. Once the user ﬁnishes making changes, 
+you pop it off the stack.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 263
+
+--- PAGE 264 ---
+Here’s a top-level and a side-level view of the navigation stack:
+Now, it’s time for a quick overview of Navigator 1.0.
+Navigator 1.0 overview
+Before the release of Flutter 1.22, you could only shift between screens by issuing 
+direct commands like “show this now” or “remove the current screen and go back to 
+the previous one”. Navigator 1.0 provides a simple set of APIs for you to navigate 
+between screens. The most common ones include:
+• push(): Adds a new route on the stack.
+• pop(): Removes a route from the stack.
+So how do you add a navigator to your app?
+Most Flutter apps start with WidgetsApp as the root widget.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 264
+
+--- PAGE 265 ---
+Note: So far you have used MaterialApp, which extends WidgetsApp.
+WidgetsApp wraps many other common widgets that your app requires. Among these 
+wrapped widgets are a top-level Navigator to manage the pages you push and pop.
+Pushing and popping routes
+To show another screen to the user, you need to push a Route onto the Navigator 
+stack. Here’s an example of that code:
+bool result = await Navigator.push<bool>( 
+  context, 
+  MaterialPageRoute<bool>( 
+    builder: (BuildContext context) => OnboardingScreen() 
+  ), 
+);
+Here, MaterialPageRoute returns an instance of your new screen widget. Navigator 
+returns the result of the push whenever the screen pops off the stack.
+Here’s how you pop a route off the stack:
+Navigator.pop(context);
+This seems easy enough. So why not just use Navigator 1.0? Well, it has a few 
+disadvantages.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 265
+
+--- PAGE 266 ---
+Navigator 1.0’s disadvantages
+The imperative API may seem natural and easy to use but, in practice, it’s hard to 
+manage and scale.
+The ﬁrst is that there’s no good way to manage your pages without keeping a mental 
+map of where you push and pop a screen.
+Imagine a new developer has just joined your team. Where would they even start? 
+They’d surely be confused.
+Moreover, Navigator 1.0 doesn’t expose the route stack to developers. This makes it 
+difﬁcult to handle complicated cases, like adding and removing a screen between 
+pages.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 266
+
+--- PAGE 267 ---
+For example, in Fooderlich, you want to show the Onboarding screen only if the user 
+hasn’t completed the onboarding yet. Handling that with Navigator 1.0 is 
+complicated.
+Another disadvantage is that Navigator 1.0 does not update the web URL path. Any 
+time you go to a new page, you only see the base URL, like so: www.localhost:8000/
+#/. Additionally, the web browser’s forward and backward buttons may not work as 
+expected.
+Finally, on Android devices, the Back button might not work with Navigator 1.0 
+when you have nested navigators or when you add Flutter to your host Android app.
+Wouldn’t it be great if there was a declarative API that solves most of these pain 
+points? That’s why Navigator 2.0 was born!
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 267
+
+--- PAGE 268 ---
+Navigator 2.0 overview
+Flutter 1.22 introduced Navigator 2.0, a new declarative API that allows you to take 
+full control of your navigation stack. It aims to feel more Flutter-like while solving 
+the pain points of Navigator 1.0. Its main goals include:
+• Exposing the navigator’s page stack: You can now manage your pages. More 
+power, more control!
+• Backward-compatible with imperative API: You can use both imperative and 
+declarative styles in the same app.
+• Handle operating system events: Works better with events like the Android 
+system’s Back button.
+• Manage nested navigators: Gives you control over which navigator has priority.
+• Manage navigation state: Lets you parse routes and handles web URLs and deep 
+linking.
+Here are the new abstractions that make up Navigator 2.0’s declarative API:
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 268
+
+--- PAGE 269 ---
+It includes the following key components:
+• Page: An abstract class that describes the conﬁguration for a route.
+• Router: Handles conﬁguring the list of pages the Navigator displays.
+• RouterDelegate: deﬁnes how the router listens for changes to the app state to 
+rebuild the navigator’s conﬁguration.
+• RouteInformationProvider: Provides RouteInformation to the router.
+• RouteInformationParser: Parses route information into a user-deﬁned data type.
+• BackButtonDispatcher: Reports presses on the platform system’s Back button to 
+the router.
+• TransitionDelegate: Decides how pages transition into and out of the screen.
+Note: This chapter will mainly focus on the use of Navigator and 
+RouterDelegate. In the next chapter, you’ll dive deeper into the other 
+components.
+Navigation and unidirectional data ﬂow
+The imperative API is very basic, forcing you to place push() and pop() functions all 
+over your widget hierarchy — which couples all your widgets! To present another 
+screen, you also have to place callbacks up the widget hierarchy.
+With the new declarative API, you can now manage your navigation state 
+unidirectionally.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 269
+
+--- PAGE 270 ---
+The widgets are state-driven, as shown below:
+Here’s how it works:
+1. A user taps on a button.
+2. The button handler tells the app state to update.
+3. The router is a listener of the state, so it receives a notiﬁcation when the state 
+changes.
+4. Based on the new state changes, the router reconﬁgures the list of pages for the 
+navigator.
+5. Navigator detects if there’s a new page in the list and handles the transitions to 
+show the page.
+That’s it! Instead of having to build a mental mind map of how every screen presents 
+and dismisses, the state drives which pages appear.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 270
+
+--- PAGE 271 ---
+Is Navigator 2.0 always better than 
+Navigator 1.0?
+If you have an existing project, you don’t have to migrate or convert your existing 
+code to use the new API.
+Here are some tips to help you decide which is more useful for you:
+• For medium to large apps: Consider using a declarative API and a router widget. 
+You may have to manage a lot of your navigation state.
+• For small apps: For rapid prototyping or creating a small app for demos, the 
+imperative API is suitable. Sometimes push and pop are all you need!
+Next, you’ll get some hands-on experience with Navigator 2.0.
+Note: This chapter will focus on implementing Navigator 2.0. To learn more 
+about Navigator 1.0, check:
+Flutter’s Dev Cookbook Tutorials: https://ﬂutter.dev/docs/cookbook/
+navigation.
+Flutter Navigation: Getting Started by Filip Babić: https://
+www.raywenderlich.com/4562634-ﬂutter-navigation-getting-started.
+Getting started
+Open the starter project in Android Studio, run flutter pub get, then run the app.
+Note: It’s better to start with the starter project rather than continuing with 
+the project from the last chapter because the starter project contains some 
+changes speciﬁc to this chapter.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 271
+
+--- PAGE 272 ---
+You’ll see that the Fooderlich app only shows a Splash screen.
+Don’t worry, you’ll connect all the screens soon. You’ll build a simple ﬂow that 
+features a login screen and an onboarding widget before showing the existing tab-
+based app you’ve built so far. But ﬁrst, you’ll take a look at the changes to the project 
+ﬁles.
+Changes to the project ﬁles
+Before you dive into navigation, there are new ﬁles in this starter project to help you 
+out.
+In main.dart, Fooderlich is now a StatefulWidget. It’ll listen to state changes and 
+rebuild corresponding widgets accordingly.
+Fooderlich now supports the user setting for dark mode.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 272
+
+--- PAGE 273 ---
+What’s new in the screens folder
+There are eight new changes in lib/screens/:
+• splash_screen.dart: Conﬁgures the initial Splash screen.
+• login_screen.dart: Allows the user to log in.
+• onboarding_screen.dart: Guides the user through a series of steps to learn more 
+about the app.
+• proﬁle_screen.dart: Allows users to check their proﬁle, update settings and log 
+out.
+• home.dart: Now includes a Proﬁle button on the top-right for the user to view 
+their proﬁle.
+• screens.dart: A barrel ﬁle that groups all the screens into a single import.
+Later, you’ll use these to construct your authentication UI ﬂow.
+Changes to the models folder
+There are a few changes to ﬁles in lib/models/.
+tab_manager.dart has been removed. Instead, you’ll manage the user’s tab selection 
+in app_state_manager.dart, which you’ll build soon.
+In addition, there are three new model objects:
+• fooderlich_pages.dart: Describes a list of unique keys for each page.
+• user.dart: Describes a single user. Includes information like the user’s role, proﬁle 
+picture, full name and app settings.
+• proﬁle_manager.dart: Manages the user’s proﬁle state by, for example, getting 
+the user’s info, checking if the user is viewing their proﬁle and setting dark mode.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 273
+
+--- PAGE 274 ---
+Additional assets
+assets/sample_data/ contains the following mock data:
+• sample_explore_recipes.json, sample_friends_feed.json and 
+sample_recipes.json: These all include an id ﬁeld, to give each displayed tile a 
+unique key.
+• ExploreRecipe, SimpleRecipe and Post also include an additional id ﬁeld.
+assets/ contains new images, which you’ll use to build the new onboarding guide.
+New packages
+There are two new packages in pubspec.yaml:
+smooth_page_indicator: ^0.2.3 
+webview_flutter: ^2.0.7
+Here’s what they do:
+• smooth_page_indicator: Shows a page indicator when you scroll through pages.
+• webview_ﬂutter: Provides a WebView widget to show web content on the iOS or 
+Android platform.
+Android SDK version
+If you open android/app/build.gradle you will notice that the minSdkVersion is 
+now 19, as shown below:
+android { 
+    defaultConfig { 
+        ... 
+        minSdkVersion 19 
+        ... 
+    } 
+}
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 274
+
+--- PAGE 275 ---
+This is because webview_ﬂutter depends on Android SDK 19 or higher to enable 
+hybrid composition.
+Note: For more information check out the webview_ﬂutter documentation 
+https://pub.dev/packages/webview_ﬂutter
+Now that you know what’s changed, you’ll get a quick overview of the UI ﬂow you’ll 
+build in this chapter.
+Looking over the UI ﬂow
+Here are the ﬁrst three screens you show the user:
+1. When the user launches the app, the ﬁrst screen they’ll see is the Splash screen. 
+This gives the developer the chance to initialize and conﬁgure the app.
+2. Once initialized, the user navigates to the Login screen. The user must now 
+enter their username and password, then tap Login.
+3. Once the user logs in, an Onboarding screen shows them how to use the app. 
+The user has two choices: swipe through a guide to learn more about the app or 
+skip.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 275
+
+--- PAGE 276 ---
+From the Onboarding screen, the user goes to the app’s Home. They can now start 
+using the app.
+The app presents the user with three tabs with these options:
+1. Explore: View recipes for the day and see what their friends are cooking up.
+2. Recipes: Browse a collection of recipes they want to cook.
+3. To Buy: Add ingredients or items to their grocery list.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 276
+
+--- PAGE 277 ---
+Next, the user can either tap the Add button or, if the grocery list isn’t empty, they 
+can tap an existing item. This will present the Grocery Item screen, as shown below:
+Now, how does the user view their proﬁle or log out? They start by tapping the 
+proﬁle avatar, as shown below:
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 277
+
+--- PAGE 278 ---
+On the Proﬁle screen, they can do the following:
+• View their proﬁle and see how many points they’ve earned.
+• Change the app theme to dark mode.
+• Visit the raywenderlich.com website.
+• Log out of the app.
+Below is an example of a user toggling dark mode on and then opening 
+raywenderlich.com.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 278
+
+--- PAGE 279 ---
+When you tap Log out, it reinitializes the app and goes to the Login screen, as shown 
+below:
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 279
+
+--- PAGE 280 ---
+Here’s a bird’s eye view of the entire navigation hierarchy:
+Note: There’s a large-scale version of the image in the assets folder of this 
+chapter’s materials.
+Your app is going to be awesome when it’s ﬁnished. Now, it’s time to add some code!
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 280
+
+--- PAGE 281 ---
+Managing your app state
+The ﬁrst step is to deﬁne your app state, how it can change and which components it 
+notiﬁes when a change occurs.
+In the models directory, create a new ﬁle called app_state_manager.dart and add 
+the following:
+import 'dart:async'; 
+import 'package:flutter/material.dart'; 
+ 
+// 1 
+class FooderlichTab { 
+  static const int explore = 0; 
+  static const int recipes = 1; 
+  static const int toBuy = 2; 
+} 
+ 
+class AppStateManager extends ChangeNotifier { 
+  // 2 
+  bool _initialized = false; 
+  // 3 
+  bool _loggedIn = false; 
+  // 4 
+  bool _onboardingComplete = false; 
+  // 5 
+  int _selectedTab = FooderlichTab.explore; 
+ 
+  // 6 
+  bool get isInitialized => _initialized; 
+  bool get isLoggedIn => _loggedIn; 
+  bool get isOnboardingComplete => _onboardingComplete; 
+  int get getSelectedTab => _selectedTab; 
+ 
+  // TODO: Add initializeApp 
+  // TODO: Add login 
+  // TODO: Add completeOnboarding 
+  // TODO: Add goToTab 
+  // TODO: Add goToRecipes 
+  // TODO: Add logout 
+}
+AppStateManager manages the app’s navigation state. Take a moment to understand 
+the properties you added:
+1. Creates constants for each tab the user taps.
+2. _initialized checks if the app is initialized.
+3. _loggedIn lets you check if the user has logged in.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 281
+
+--- PAGE 282 ---
+4. _onboardingComplete checks if the user completed the onboarding ﬂow.
+5. _selectedTab keeps track of which tab the user is on.
+6. These are getter methods for each property. You cannot change these properties 
+outside AppStateManager. This is important for the unidirectional ﬂow 
+architecture, where you don’t change state directly but only via function calls or 
+dispatched events.
+Now, it’s time to learn how to modify the app state. You’ll create functions to change 
+each of the properties declared above.
+Initializing the app
+Within the same ﬁle, locate // TODO: Add initializeApp and replace it with the 
+following:
+void initializeApp() { 
+  // 7 
+  Timer(const Duration(milliseconds: 2000), () { 
+    // 8 
+    _initialized = true; 
+    // 9 
+    notifyListeners(); 
+  }); 
+}
+Here’s how the code works:
+7. Sets a delayed timer for 2,000 milliseconds before executing the closure. This sets 
+how long the app screen will display after the user starts the app.
+8. Sets initialized to true.
+9. Notiﬁes all listeners.
+Logging in
+Next, locate // TODO: Add login and replace it with the following:
+void login(String username, String password) { 
+  // 10 
+  _loggedIn = true; 
+  // 11 
+  notifyListeners(); 
+}
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 282
+
+--- PAGE 283 ---
+This function takes in a username and a password. Here’s what it does:
+10. Sets loggedIn to true.
+11. Notiﬁes all listeners.
+Note: In a real scenario, you’d make an API request to log in. In this case, 
+however, you’re just using a mock.
+Completing the onboarding
+Next, locate // TODO: Add completeOnboarding and replace it with the following:
+void completeOnboarding() { 
+  _onboardingComplete = true; 
+  notifyListeners(); 
+}
+Calling completeOnboarding() will notify all listeners that the user has completed 
+the onboarding guide.
+Setting the selected tab
+Locate // TODO: Add goToTab and replace it with the following:
+void goToTab(index) { 
+  _selectedTab = index; 
+  notifyListeners(); 
+}
+goToTab sets the index of _selectedTab and notiﬁes all listeners.
+Navigating to the Recipes tab
+Locate // TODO: Add goToRecipes and replace it with the following:
+void goToRecipes() { 
+  _selectedTab = FooderlichTab.recipes; 
+  notifyListeners(); 
+}
+This is a helper function that goes straight to the recipes tab.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 283
+
+--- PAGE 284 ---
+Adding the log out capability
+Locate // TODO: Add logout and replace it with the following:
+void logout() { 
+  // 12 
+  _loggedIn = false; 
+  _onboardingComplete = false; 
+  _initialized = false; 
+  _selectedTab = 0; 
+ 
+  // 13 
+  initializeApp(); 
+  // 14 
+  notifyListeners(); 
+}
+When the user logs out, the code above:
+12. Resets all app state properties.
+13. Reinitializes the app.
+14. Notiﬁes all listeners of state change.
+Notice that all these functions follow the same pattern: they set some values that 
+aren’t publicly exposed and then notify listeners. This is the essence of the 
+unidirectional data ﬂow architecture you’re implementing.
+Finally, open lib/models/models.dart and add the following:
+export 'app_state_manager.dart';
+This way, you add the newly created AppStateManager to the barrel ﬁle. You now 
+have a well-deﬁned model of the app state and a mechanism that notiﬁes listeners of 
+state changes. This is great progress. Now, you’ll use it in the app!
+Using the new AppStateManager
+Open lib/main.dart, locate // TODO: Create AppStateManager and replace it with 
+the following:
+final _appStateManager = AppStateManager();
+Here, you initialize the AppStateManager.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 284
+
+--- PAGE 285 ---
+Next, locate // TODO: Add AppStateManager ChangeNotifierProvider and 
+replace it with the following:
+ChangeNotifierProvider(create: (context) => _appStateManager,),
+This creates a change provider for AppStateManager, so widget descendants can 
+access or listen to the app state.
+That’s all! Notice how you deﬁned your app’s state ﬁrst? Any developer looking at 
+this ﬁle can tell how the user interacts with the Fooderlich app.
+Don’t close main.dart, you’re going to update it again soon. Next, you’ll add a 
+router.
+Creating the router
+Router conﬁgures the list of pages the Navigator displays. It listens to state 
+managers and, based on the state changes, conﬁgures the list of page routes.
+Under lib/, create a new directory called navigation. Within that folder, create a new 
+ﬁle called app_router.dart. Add the following code:
+import 'package:flutter/material.dart'; 
+import '../models/models.dart'; 
+import '../screens/screens.dart'; 
+ 
+// 1 
+class AppRouter extends RouterDelegate 
+    with ChangeNotifier, PopNavigatorRouterDelegateMixin { 
+  // 2 
+  @override 
+  final GlobalKey<NavigatorState> navigatorKey; 
+ 
+  // 3 
+  final AppStateManager appStateManager; 
+  // 4 
+  final GroceryManager groceryManager; 
+  // 5 
+  final ProfileManager profileManager; 
+ 
+  AppRouter({ 
+    this.appStateManager, 
+    this.groceryManager, 
+        this.profileManager 
+  }) 
+      : navigatorKey = GlobalKey<NavigatorState>() { 
+    // TODO: Add Listeners
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 285
+
+--- PAGE 286 ---
+  } 
+ 
+  // TODO: Dispose listeners 
+ 
+  // 6 
+  @override 
+  Widget build(BuildContext context) { 
+    // 7 
+    return Navigator( 
+      // 8 
+      key: navigatorKey, 
+      // TODO: Add onPopPage 
+      // 9 
+      pages: [ 
+        // TODO: Add SplashScreen 
+        // TODO: Add LoginScreen 
+        // TODO: Add OnboardingScreen 
+        // TODO: Add Home 
+        // TODO: Create new item 
+        // TODO: Select GroceryItemScreen 
+        // TODO: Add Profile Screen 
+        // TODO: Add WebView Screen 
+      ], 
+    ); 
+  } 
+ 
+  // TODO: Add _handlePopPage 
+ 
+  // 10 
+  @override 
+  Future<void> setNewRoutePath(configuration) async => null; 
+}
+Here’s how the router widget works:
+1. It extends RouterDelegate. The system will tell the router to build and conﬁgure 
+a navigator widget.
+2. Declares GlobalKey, a unique key across the entire app.
+3. Declares AppStateManager. The router will listen to app state changes to 
+conﬁgure the navigator’s list of pages.
+4. Declares GroceryManager to listen to the user’s state when you create or edit an 
+item.
+5. Declares ProfileManager  to listen to the user proﬁle state.
+6. RouterDelegate requires you to add a build(). This conﬁgures your navigator 
+and pages.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 286
+
+--- PAGE 287 ---
+7. Conﬁgures a Navigator.
+8. Uses the navigatorKey, which is required to retrieve the current navigator.
+9. Declares pages, the stack of pages that describes your navigation stack.
+10. Sets setNewRoutePath to null since you aren’t supporting Flutter web apps yet. 
+Don’t worry about that for now, you’ll learn more about that topic in the next 
+chapter.
+Note: How is this declarative? Instead of telling the navigator what to do with 
+push() and pop(), you tell it: when the state is x, render y pages.
+Now that you’ve deﬁned your router, you’ll let it handle routing requests.
+Handling pop events
+Locate // TOOD: Add _handlePopPage and replace it with the following:
+bool _handlePopPage( 
+  // 1 
+  Route<dynamic> route, 
+  // 2 
+  result) { 
+  // 3 
+  if (!route.didPop(result)) { 
+    // 4 
+    return false; 
+  } 
+ 
+  // 5 
+  // TODO: Handle Onboarding and splash 
+  // TODO: Handle state when user closes grocery item screen 
+  // TODO: Handle state when user closes profile screen 
+  // TODO: Handle state when user closes WebView screen 
+    // 6 
+  return true; 
+}
+When the user taps the Back button or triggers a system back button event, it ﬁres a 
+helper method, onPopPage.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 287
+
+--- PAGE 288 ---
+Here’s how it works:
+1. This is the current Route, which contains information like RouteSettings to 
+retrieve the route’s name and arguments.
+2. result is the value that returns when the route completes — a value that a dialog 
+returns, for example.
+3. Checks if the current route’s pop succeeded.
+4. If it failed, return false.
+5. If the route pop succeeds, this checks the different routes and triggers the 
+appropriate state changes.
+Now, to use this callback helper, locate // TODO: Add onPopPage and replace it with 
+the following:
+onPopPage: _handlePopPage,
+This way, it’s called every time a page pops from the stack.
+Adding state listeners
+Now, you need to connect the state managers. When the state changes, the router 
+will reconﬁgure the navigator with a new set of pages.
+Locate // TODO: Add Listeners and replace it with the following:
+appStateManager.addListener(notifyListeners); 
+groceryManager.addListener(notifyListeners); 
+profileManager.addListener(notifyListeners);
+Here’s what the state managers do:
+• appStateManager: Determines the state of the app. It manages whether the app 
+initialized login and if the user completed the onboarding.
+• groceryManager: Manages the list of grocery items and the item selection state.
+• proﬁleManager: Manages the user’s proﬁle and settings.
+When you dispose the router, you must remove all listeners. Forgetting to do this will 
+throw an exception.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 288
+
+--- PAGE 289 ---
+Locate // TODO: Dispose listeners and replace it with the following:
+@override 
+void dispose() { 
+    appStateManager.removeListener(notifyListeners); 
+  groceryManager.removeListener(notifyListeners); 
+    profileManager.removeListener(notifyListeners); 
+  super.dispose(); 
+}
+Congratulations, you just set up your router widget. Now, it’s time to use it! Keep 
+app_router.dart open, you’ll use it again soon.
+Using your app router
+The newly created router needs to know who the managers are, so you’ll now 
+connect it to the state, grocery and proﬁle managers.
+Open main.dart and locate // TODO: Import app_router. Replace it with the 
+following:
+import 'navigation/app_router.dart';
+Next, locate // TODO: Define AppRouter and replace it with the following:
+AppRouter _appRouter;
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 289
+
+--- PAGE 290 ---
+Once you declare your app router, locate // TODO: Initialize app router and 
+replace it with the following:
+@override 
+void initState() { 
+  _appRouter = AppRouter( 
+    appStateManager: _appStateManager, 
+    groceryManager: _groceryManager, 
+    profileManager: _profileManager, 
+  ); 
+  super.initState(); 
+}
+You’ve now initialized your app router in initState() before you use it. Keep 
+main.dart open.
+For your next step, locate // TODO: Replace with Router widget. Replace the 
+existing home: const SplashScreen(), line with the following code:
+home: Router( 
+    routerDelegate: _appRouter, 
+  // TODO: Add backButtonDispatcher 
+),
+You don’t need the Splash screen import anymore. Go ahead and remove the 
+following code:
+import 'screens/splash_screen.dart';
+Your router is all set now! It’s time to let it play with screens.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 290
+
+--- PAGE 291 ---
+Adding screens
+With all the infrastructure in place, it’s now time to deﬁne which screen to display 
+according to the route. But ﬁrst, check out the current situation.Build and run on 
+iOS. You’ll notice an exception in the Run tab:
+Even worse, the simulator might display the red screen of death:
+That’s because Navigator pages can’t be empty. The app threw an exception because 
+it can’t generate a route. You’ll ﬁx that by adding screens next.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 291
+
+--- PAGE 292 ---
+Showing the Splash screen
+You’ll start from the beginning, displaying the Splash screen.
+Open lib/screens/splash_screen.dart and add the following imports:
+import 'package:provider/provider.dart'; 
+import '../models/models.dart';
+Next, locate // TODO: SplashScreen MaterialPage Helper and replace it with 
+the following:
+static MaterialPage page() { 
+  return MaterialPage( 
+    name: FooderlichPages.splashPath, 
+      key: ValueKey(FooderlichPages.splashPath), 
+      child: const SplashScreen(),); 
+}
+Here, you deﬁne a static method to create a MaterialPage that sets the appropriate 
+unique identiﬁer and creates SplashScreen.
+Next locate // TODO: Initialize App and replace it with the following:
+Provider.of<AppStateManager>(context, listen: 
+false).initializeApp();
+Here, you use the current context to retrieve the AppStateManager to initialize the 
+app.
+Now, you want to add the Splash screen that displays while the app is starting.
+Go back to app_router.dart, locate // TODO: Add SplashScreen and replace it 
+with the following:
+if (!appStateManager.isInitialized) SplashScreen.page(),
+Here, you check if the app is initialized. If it’s not, you show the Splash screen.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 292
+
+--- PAGE 293 ---
+Perform a hot restart and you’ll see the following screen ﬂash by:
+You’ll still see an error but don’t worry, it will go away shortly.
+Congratulations, you just set up your ﬁrst route! Now, it’ll be much easier to prepare 
+the other routes. Leave app_router.dart open.
+The next set of code updates will follow a similar pattern:
+• Update the screen code to trigger state changes via managers.
+• Update the router code to handle new state changes, according to the route set as 
+current.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 293
+
+--- PAGE 294 ---
+Displaying the Login screen
+You’ll now implement the ﬁrst step of the routing logic: displaying the Login screen 
+after the Splash screen if the user isn’t logged in.
+Open lib/screens/login_screen.dart and add the following import:
+import 'package:provider/provider.dart'; 
+import '../models/models.dart';
+Next, locate // TODO: LoginScreen MaterialPage Helper and replace it with the 
+following:
+static MaterialPage page() { 
+  return MaterialPage( 
+      name: FooderlichPages.loginPath, 
+      key: ValueKey(FooderlichPages.loginPath), 
+      child: const LoginScreen()); 
+}
+Here, you deﬁne a static method that creates a MaterialPage, sets a unique key and 
+creates LoginScreen. Keep login_screen.dart open.
+Switch back to app_router.dart, locate // TODO: Add LoginScreen and replace it 
+with the following:
+if (appStateManager.isInitialized && !
+appStateManager.isLoggedIn) 
+LoginScreen.page(),
+This code says that if the app initialized and the user hasn’t logged in, it should show 
+the login page.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 294
+
+--- PAGE 295 ---
+Trigger a hot restart. You’ll see the Splash screen for a few seconds, followed by the 
+Login screen:
+Congratulations, the error has disappeared and you have successfully implemented 
+routes. The ﬁnal step is to handle changes to the login state.
+Back in login_screen.dart, locate // TODO: Login -> Navigate to home and 
+replace it with the following:
+Provider.of<AppStateManager>(context, listen: false) 
+  .login('mockUsername', 'mockPassword');
+This uses AppStateManager to call a function that updates the user’s login status. 
+What happens when the login state changes? Glad you asked, that’s the next step. :]
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 295
+
+--- PAGE 296 ---
+Transitioning from Login to Onboarding 
+screen
+When the user is logged in, you want to show the Onboarding screen.
+Open lib/screens/onboarding_screen.dart and add the following imports:
+import 'package:provider/provider.dart'; 
+import '../models/models.dart';
+Next, locate // TODO: Add OnboardingScreen MaterialPage Helper and replace 
+it with the following:
+static MaterialPage page() { 
+  return MaterialPage( 
+      name: FooderlichPages.onboardingPath, 
+      key: ValueKey(FooderlichPages.onboardingPath), 
+      child: const OnboardingScreen(),); 
+}
+Here, you conﬁgure a MaterialPage, set the onboarding page’s unique key and 
+create the Onboarding screen widget.
+Return to app_router.dart, locate // TODO: Add OnboardingScreen and replace it 
+with the following:
+if (appStateManager.isLoggedIn && 
+    !appStateManager.isOnboardingComplete) 
+OnboardingScreen.page(),
+Here, you’re showing the Onboarding screen if the user is logged in but hasn’t 
+completed the Onboarding Guide yet.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 296
+
+--- PAGE 297 ---
+Perform another hot restart then tap the Login button. You’ll see the Onboarding 
+screen appear.
+Congratulations, this is good progress. Now, you’ll add logic to handle changes 
+triggered within the Onboarding screen.
+Handling the Skip and Back buttons in 
+Onboarding
+When the user taps the Skip button rather than going through the Onboarding 
+guide, you want to show the usual home screen.
+In onboarding_screen.dart, locate // TODO: Onboarding -> Navigate to home 
+and replace it with the following:
+Provider.of<AppStateManager>(context, listen: false) 
+  .completeOnboarding();
+Here, tapping Skip triggers completeOnboarding(), which updates the state and 
+indicates that the user completed onboarding. It’s not working yet, so don’t panic if 
+you see an error.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 297
+
+--- PAGE 298 ---
+Next, you want to deal with what happens when the user taps Back on the 
+Onboarding screen.
+Go back to app_router.dart, locate TODO: Handle Onboarding and Splash and 
+replace it with the following:
+if (route.settings.name == FooderlichPages.onboardingPath) { 
+  appStateManager.logout(); 
+}
+If the user taps the Back button from the Onboarding screen, it calls logout(). This 
+resets the entire app state and the user has to log in again.
+The app will return to the Splash screen to reinitialize, as shown below:
+Transitioning from Onboarding to Home
+When the user taps Skip, the app will show the Home screen. Open lib/screens/
+home.dart and add the following imports:
+import 'package:provider/provider.dart'; 
+import '../models/models.dart';
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 298
+
+--- PAGE 299 ---
+Next, locate // TODO: Home MaterialPage Helper and replace it with the 
+following:
+static MaterialPage page(int currentTab) { 
+  return MaterialPage( 
+      name: FooderlichPages.home, 
+      key: ValueKey(FooderlichPages.home), 
+      child: Home( 
+        currentTab: currentTab, 
+      ),); 
+}
+Here, you’ve created a static MaterialPage helper with the current tab to display on 
+the Home screen. Keep home.dart open.
+Return to app_router.dart, locate // TODO: Add Home and replace it with the 
+following:
+if (appStateManager.isOnboardingComplete) 
+Home.page(appStateManager.getSelectedTab),
+This tells your app to show the home page only when the user completes 
+onboarding.
+Finally, you can see the onboarding in action!
+Hot restart, navigate to the Onboarding screen by tapping the Login button and then 
+tap the Skip button. You’ll now see the Home screen. Congratulations!
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 299
+
+--- PAGE 300 ---
+You’ll notice that you can’t switch to different tabs. That’s because you haven’t set 
+up the state handling yet. You’ll do that next.
+Handling tab selection
+Open home.dart, locate // TODO: Wrap Consumer for AppStateManager and 
+replace it with the following:
+return Consumer<AppStateManager>( 
+  builder: (context, appStateManager, child) {
+Ignore any red squiggles for now.
+Next, scroll down to the end of the widget and, just before the closing }, add the 
+following:
+  },);
+Make sure you have auto-format turned on and save the ﬁle to reformat.
+You’ve just wrapped your entire widget inside a Consumer. Consumer will listen for 
+app state changes and rebuild its inner widget accordingly.
+Next, locate // TODO: Update user’s selected tab and replace it with the 
+following:
+Provider.of<AppStateManager>(context, listen: false) 
+    .goToTab(index);
+Here, you specify that tapping a tab calls goToTab().
+Handling the Browse Recipes button
+Now, you want to add that tapping the Browse Recipes button brings the user to the 
+Recipes tab.
+Open empty_grocery_screen.dart add the following imports:
+import 'package:provider/provider.dart'; 
+import '../models/models.dart';
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 300
+
+--- PAGE 301 ---
+Next, locate // TODO: Update user's selected tab and replace it with the 
+following:
+Provider.of<AppStateManager>(context, listen: false) 
+  .goToRecipes();
+Here, you specify that tapping Browse Recipes calls goToRecipes(). This is similar 
+to what you did for tabs.
+To test it, tap the To Buy tab in the bottom navigation bar, then tap the Browse 
+Recipes button. Notice that the app goes to the Recipes tab, as shown below:
+Showing the Grocery Item screen
+Next, you’ll connect the Grocery Item screen. Open lib/screens/
+grocery_item_screen.dart. Locate // TODO: GroceryItemScreen MaterialPage 
+Helper and replace it with the following:
+static MaterialPage page( 
+    {GroceryItem item, 
+    int index, 
+    Function(GroceryItem) onCreate, 
+    Function(GroceryItem, int) onUpdate}) { 
+  return MaterialPage(
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 301
+
+--- PAGE 302 ---
+      name: FooderlichPages.groceryItemDetails, 
+      key: ValueKey(FooderlichPages.groceryItemDetails), 
+      child: GroceryItemScreen( 
+        originalItem: item, 
+        index: index, 
+        onCreate: onCreate, 
+        onUpdate: onUpdate, 
+      ),); 
+}
+Here, you create a static page helper that wraps GroceryItemScreen in a 
+MaterialPage. The Grocery Item screen requires:
+1. The original grocery item, if any. Otherwise, it assumes the user is creating a new 
+grocery item.
+2. The selected grocery item’s index.
+3. onCreate when the user ﬁnishes creating the new item.
+4. onUpdate when the user ﬁnishes updating an item.
+Next, you’ll implement the Grocery Item screen. There are two ways to show it:
+1. The user taps the + button to create a new grocery item.
+2. The user taps an existing grocery item to edit it.
+You’ll enable these features next.
+Creating a new grocery item
+Open lib/screens/grocery_screen.dart and locate // TODO: Create New Item. 
+Replace it with the following:
+Provider.of<GroceryManager>(context, listen: 
+false).createNewItem();
+Here, you trigger a call to createNewItem() when the user taps the + button.
+Next, go back to app_router.dart, locate // TODO: Create new item and replace it 
+with the following:
+// 1 
+if (groceryManager.isCreatingNewItem) 
+// 2 
+GroceryItemScreen.page( 
+  onCreate: (item) {
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 302
+
+--- PAGE 303 ---
+    // 3 
+    groceryManager.addItem(item); 
+  },),
+Here’s how this lets you navigate to a new grocery item:
+1. Checks if the user is creating a new grocery item.
+2. If so, shows the Grocery Item screen.
+3. Once the user saves the item, updates the grocery list.
+With your app running, perform a hot restart. You’ll now be able to create a new 
+grocery item, as shown below:
+Editing an existing grocery item
+Open grocery_list_screen.dart, locate // TODO: Tap on grocery item and 
+replace it with the following:
+manager.groceryItemTapped(index);
+This ﬁres groceryItemTapped() to let listeners know that the user selected a 
+grocery item.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 303
+
+--- PAGE 304 ---
+Now, return to app_router.dart, locate // TODO: Select GroceryItemScreen and 
+replace with the following:
+// 1 
+if (groceryManager.selectedIndex != null) 
+// 2 
+GroceryItemScreen.page( 
+  item: groceryManager.selectedGroceryItem, 
+  index: groceryManager.selectedIndex, 
+  onUpdate: (item, index) { 
+    // 3 
+    groceryManager.updateItem(item, index); 
+  },),
+Here’s how the code works:
+1. Checks to see if a grocery item is selected.
+2. If so, creates the Grocery Item screen page.
+3. When the user changes and saves an item, it updates the item at the current 
+index.
+Now, you’re able to tap on a grocery item, edit it and save it!
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 304
+
+--- PAGE 305 ---
+Dismissing the Grocery Item screen
+Sometimes, a user starts to add a grocery item, then changes their mind. To cover 
+this case, open app_router.dart, locate // TODO: Handle state when user 
+closes grocery item screen and replace it with the following:
+if (route.settings.name == FooderlichPages.groceryItemDetails) { 
+    groceryManager.groceryItemTapped(null); 
+}
+This ensures that the appropriate state is reset when the user taps the back button 
+from the Grocery Item screen.
+Hot restart and then test the sequence again:
+1. Tap the + button to create a new grocery item.
+2. Tap the < button to go back.
+Notice that the app now works as expected.
+Navigating to the Proﬁle screen
+The user can’t navigate to the Proﬁle screen yet. Before you can ﬁx that, you need to 
+handle the state changes.
+Open home.dart, locate // TODO: home -> profile and replace it with the 
+following:
+Provider.of<ProfileManager>(context, listen: false) 
+.tapOnProfile(true);
+This triggers tapOnProfile() whenever the user taps the Proﬁle button.
+Now that the user can get to the Proﬁle screen, they need to be able to close it again.
+Open lib/screens/proﬁle_screen.dart, locate // TODO: Close Profile Screen 
+and replace it with the following:
+Provider.of<ProfileManager>(context, listen: false) 
+  .tapOnProfile(false);
+This handles the action that occurs when the user taps the X (close) button. It 
+updates the proﬁle state so the navigator removes the Proﬁle screen.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 305
+
+--- PAGE 306 ---
+Now, locate // TODO: ProfileScreen MaterialPage Helper and replace it with 
+the following:
+static MaterialPage page(User user) { 
+  return MaterialPage( 
+      name: FooderlichPages.profilePath, 
+      key: ValueKey(FooderlichPages.profilePath), 
+      child: ProfileScreen(user: user),); 
+}
+Here, you create a helper MaterialPage for the Proﬁle screen. It requires a user 
+object.
+Next, open app_router.dart, locate // TODO: Add Profile Screen and replace it 
+with the following:
+if (profileManager.didSelectUser) 
+ProfileScreen.page(profileManager.getUser),
+This checks the proﬁle manager to see if the user selected their proﬁle. If so, it shows 
+the Proﬁle screen.
+Perform a hot reload and tap the user’s avatar. It will now present the Proﬁle screen:
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 306
+
+--- PAGE 307 ---
+Open app_router.dart, locate // TODO: Handle state when user closes 
+profile screen and replace it with the following:
+if (route.settings.name == FooderlichPages.profilePath) { 
+  profileManager.tapOnProfile(false); 
+}
+This checks to see if the route you are popping is indeed the profilePath, then tells 
+the profileManager that the Proﬁle screen is not visible anymore.
+Now tap the X button and the Proﬁle screen will disappear.
+Navigating to raywenderlich.com
+Within the Proﬁle screen, you can do three things:
+1. Change the dark mode setting.
+2. Visit raywenderlich.com.
+3. Log out.
+Next, you’ll handle the WebView screen.
+Transitioning from Proﬁle to WebView
+Return to proﬁle_screen.dart, locate // TODO: Open raywenderlich.com 
+WebView and replace it with the following:
+Provider.of<ProfileManager>(context, listen: false) 
+  .tapOnRaywenderlich(true);
+Here, you are saying to call tapOnRaywenderlich() when the user taps the 
+corresponding button. This triggers a rebuild on your router widget and adds the 
+WebView screen.
+Now, open webview_screen.dart and import the following:
+import '../models/models.dart';
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 307
+
+--- PAGE 308 ---
+Next, locate // TODO: WebViewScreen MaterialPage Helper and replace it with 
+the following:
+static MaterialPage page() { 
+  return MaterialPage( 
+      name: FooderlichPages.raywenderlich, 
+      key: ValueKey(FooderlichPages.raywenderlich), 
+      child: const WebViewScreen(),); 
+}
+Here, you create a static MaterialPage that wraps a WebView screen widget.
+Next, go back to app_router.dart. Locate // TODO: Add WebView Screen and 
+replace it with the following:
+if (profileManager.didTapOnRaywenderlich) 
+WebViewScreen.page(),
+This checks if the user tapped the option to go to the raywenderlich.com website. If 
+so, it presents the WebView screen.
+Hot reload and go to the Proﬁle screen. Now, tap View raywenderlich.com and 
+you’ll see it present in a web view, as shown below:
+What about closing the view?
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 308
+
+--- PAGE 309 ---
+Still in app_router.dart, locate // TODO: Handle state when user closes 
+WebView screen and replace it with the following:
+if (route.settings.name == FooderlichPages.raywenderlich) { 
+  profileManager.tapOnRaywenderlich(false); 
+}
+Here, you check if the name of the route setting is raywenderlich, then call the 
+appropriate method on profileManager.
+Next, you’ll work on the log out functionality.
+Logging out
+To handle logging out the user, go to proﬁle_screen.dart and locate // TODO: 
+Logout user. Replace it with the following:
+// 1 
+Provider.of<ProfileManager>(context, listen: false) 
+    .tapOnProfile(false); 
+// 2 
+Provider.of<AppStateManager>(context, listen: false).logout();
+Here’s what happens when the log out action triggers:
+1. Sets the user proﬁle tap state to false.
+2. Calls logout(), which resets the entire app state.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 309
+
+--- PAGE 310 ---
+Save your changes. Now, tap Log out from the Proﬁle screen and you’ll notice it goes 
+back to the Splash screen, as shown below:
+Next, you’ll address the Android system Back button.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 310
+
+--- PAGE 311 ---
+Handling the Android system’s Back 
+button
+If you have been running the project on iOS, stop the app in your existing device or 
+simulator.Now, build and run your app on an Android device or emulator. Do the 
+following tasks:
+1. Navigate through the app to the To Buy tab.
+2. Tap the + button.
+3. Tap the Android system Back button, not the app’s Back button.
+You expect it to go back to the previous page. Instead, it exits the entire app!
+To ﬁx this, open main.dart, locate // TODO: Add backButtonDispatcher and 
+replace it with the following:
+backButtonDispatcher: RootBackButtonDispatcher(),
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 311
+
+--- PAGE 312 ---
+Here, you set the router widget’s BackButtonDispatcher, which listens to the 
+platform pop route notiﬁcations. When the user taps the Android system Back 
+button, it triggers the router delegate’s onPopPage callback.
+Hot restart your app and try the same steps again.
+Woo-hoo, it behaves as expected! Congratulations, you’ve now completed the entire 
+UI navigation ﬂow.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 312
+
+--- PAGE 313 ---
+Key points
+• You can wrap another router in a containing widget.
+• Navigator 1.0 is useful for quick and simple prototypes, presenting alerts and 
+dialogs.
+• Navigator 2.0 is useful when you need more control and organization when 
+managing the navigation stack.
+• In Navigator 2.0, the navigator widget holds a list of MaterialPage objects.
+• Use a router widget to listen to navigation state changes and conﬁgure your 
+navigator’s list of pages.
+• Setting the router’s Back button dispatcher lets you listen to platform system 
+events.
+Where to go from here?
+You’ve now learned how to navigate between screens the declarative way. Instead of 
+calling push() and pop() in different widgets, you use multiple state managers to 
+manage your state.
+You also learned to create a router widget, which encapsulates and conﬁgures all the 
+page routes for a navigator. Now, you can easily manage your navigation ﬂow in a 
+single router object!
+To learn about this topic here are some recommendations for high-level theory and 
+walk-throughs:
+• To understand the motivation behind Navigator 2.0, check out the design 
+document: https://docs.google.com/document/d/1Q0jx0l4-
+xymph9O6zLaOY4d_f7YFpNWX_eGbzYxr9wY/edit.
+• Watch this Navigator 2.0 presentation by Chun-Heng Tai, who contributed to the 
+declarative API: https://youtu.be/xFFQKvcad3s?t=3158.
+• In this video, Simon Lightfoot walks you through a Navigator 2.0 example: https://
+www.youtube.com/watch?v=Y6kh5UonEZ0.
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 313
+
+--- PAGE 314 ---
+• Flutter Navigation 2.0 by Dominik Roszkowski goes through the differences 
+between Navigator 1.0 and 2.0, including a video example: https://youtu.be/
+JmfYeF4gUu0?t=9728.
+• For in-depth knowledge about Navigator, check out Flutter’s 
+documentation:https://api.ﬂutter.dev/ﬂutter/widgets/Navigator-class.html.
+Other libraries to check out
+Navigator 2.0 can be a little hard to understand and manage on its own. The 
+packages below wrap around the Navigator 2.0 API to make routing and navigation 
+easier:
+• https://pub.dev/packages/beamer
+• https://pub.dev/packages/ﬂow_builder
+• https://pub.dev/packages/ﬂuro
+• https://pub.dev/packages/vrouter
+• https://pub.dev/packages/auto_route
+There are so many more things you can do with Navigator 2.0. In the next chapter, 
+you’ll look at supporting web URLs and deep linking!
+Flutter Apprentice Chapter 7: Routes & Navigation
+raywenderlich.com 314
+
